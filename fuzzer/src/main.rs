@@ -1,19 +1,3 @@
-// Nautilus
-// Copyright (C) 2020  Daniel Teuchert, Cornelius Aschermann, Sergej Schumilo
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 extern crate chrono;
 extern crate clap;
 extern crate forksrv;
@@ -432,7 +416,7 @@ fn main() {
                             .trees()
                     );
                     println!("------------------------------------------------------    ");
-                    println!(
+                    /*println!(
                         "Last ASAN crash:          {}                              ",
                         last_found_asan
                     );
@@ -481,7 +465,7 @@ fn main() {
                         "New paths found by Havoc Rec:    {}                       ",
                         bits_found_by_havoc_rec
                     );
-                    println!("------------------------------------------------------    ");
+                    println!("------------------------------------------------------    ");*/
                     //println!("Global bitmap: {:?}", global_state.lock().expect("RAND_1887203473").bitmaps.get(&false).expect("RAND_1887203473"));
                     thread::sleep(time::Duration::from_secs(1));
                 }

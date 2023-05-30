@@ -1,19 +1,3 @@
-// Nautilus
-// Copyright (C) 2020  Daniel Teuchert, Cornelius Aschermann, Sergej Schumilo
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 extern crate byteorder;
 extern crate nix;
 extern crate serde;
@@ -105,17 +89,17 @@ impl ForkServer {
             ForkResult::Child => {
                 let forkserver_fd = 198; // from AFL config.h
                 unistd::dup2(ctl_out, forkserver_fd as RawFd)
-                    .expect("couldn't dup2 ctl_our to FROKSRV_FD");
+                    .expect("couldn't dup2 ctl_out to FROKSRV_FD");
                 unistd::dup2(st_in, (forkserver_fd + 1) as RawFd)
-                    .expect("couldn't dup2 ctl_our to FROKSRV_FD+1");
+                    .expect("couldn't dup2 st_in to FROKSRV_FD+1");
 
                 unistd::dup2(inp_file.as_raw_fd(), 0).expect("couldn't dup2 input file to stdin");
-                unistd::close(inp_file.as_raw_fd()).expect("couldn't close input file");
 
+                unistd::close(inp_file.as_raw_fd()).expect("couldn't close input file");
                 unistd::close(ctl_in).expect("couldn't close ctl_in");
                 unistd::close(ctl_out).expect("couldn't close ctl_out");
-                unistd::close(st_in).expect("couldn't close ctl_out");
-                unistd::close(st_out).expect("couldn't close ctl_out");
+                unistd::close(st_in).expect("couldn't close st_out");
+                unistd::close(st_out).expect("couldn't close st_out");
 
                 let path = CString::new(path).expect("binary path must not contain zero");
                 let args = args

@@ -8,7 +8,7 @@ Config(
 	path_to_workdir:                        "/tmp/workdir",
 
 	number_of_threads:			1,
-	timeout_in_millis:			200,
+	timeout_in_millis:			2000,
 
 
 	//The rest of the options are probably not something you want to change... 
@@ -18,7 +18,7 @@ Config(
 	//Thread Settings:
 	thread_size: 				4194304,
 
-	hide_output: true, //hide stdout of the target program. Sometimes usefull for debuging
+	hide_output: true, 				//hide stdout of the target program. Sometimes usefull for debuging
 	
 	//Mutation Settings
 	number_of_generate_inputs:		100,	//see main.rs fuzzing_thread 

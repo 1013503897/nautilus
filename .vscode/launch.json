@@ -1,0 +1,53 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Lua Fuzzer",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/target/debug/fuzzer",
+            "args": [
+                "-g",
+                "/home/kali/fuzz/nautilus/grammars/lua.py",
+                "-o",
+                "/home/kali/fuzz/nautilus/work_dir/Lua_20230526",
+                "--",
+                "/home/kali/fuzz/nautilus/src/lua-5.4.6/src/lua",
+                "@@"
+            ],
+            "cwd": "${workspaceRoot}"
+        },
+        {
+            "name": "PHP Fuzzer",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/target/debug/fuzzer",
+            "args": [
+                "-g",
+                "/home/kali/fuzz/nautilus/grammars/php_custom.py",
+                "-o",
+                "/home/kali/fuzz/nautilus/work_dir/PHP_20230526",
+                "--",
+                "/home/kali/fuzz/nautilus/src/php-8.1.13/sapi/cli/php",
+                "@@"
+            ],
+            "cwd": "${workspaceRoot}"
+        },
+        {
+            "name": "Python Fuzzer",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/target/debug/fuzzer",
+            "args": [
+                "-g",
+                "grammars/python.py",
+                "-o",
+                "/home/kali/fuzz/nautilus/work_dir/Python_20230526",
+                "--",
+                "/home/kali/fuzz/nautilus/src/Python-3.10.11/python",
+                "@@"
+            ],
+            "cwd": "${workspaceRoot}"
+        }
+    ]
+}
