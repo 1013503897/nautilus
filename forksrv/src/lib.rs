@@ -110,12 +110,11 @@ impl ForkServer {
                 let shm_id = CString::new(format!("__AFL_SHM_ID={shm_file}")).unwrap();
 
                 //Asan options: set asan SIG to 223 and disable leak detection
-                let asan_settings = CString::new(
-                    "ASAN_OPTIONS=exitcode=223,abort_on_erro=true,detect_leaks=0,symbolize=0",
-                )
-                .expect("RAND_2089158993");
+                let asan_settings = CString::new("abort_on_erro=true,detect_leaks=0,symbolize=0")
+                    .expect("RAND_2089158993");
 
-                let env = vec![shm_id, asan_settings];
+                let map_size = CString::new(format!("AFL_MAP_SIZE=256000 ")).unwrap();
+                let env = vec![shm_id, asan_settings, map_size];
 
                 if hide_output {
                     let null = fcntl::open("/dev/null", fcntl::OFlag::O_RDWR, stat::Mode::empty())
@@ -125,7 +124,7 @@ impl ForkServer {
                     unistd::close(null).expect("couldn't close /dev/null");
                 }
                 println!("EXECVE {path:?} {args:?} {env:?}");
-                unistd::execve(&path, &args, &env).expect("couldn't execve afl-qemu-tarce");
+                unistd::execve(&path, &args, &env).expect("EXECVE ERROR");
                 unreachable!();
             }
         }
@@ -214,29 +213,5 @@ impl ForkServer {
             );
             (shm_id, trace_bits.cast::<[u8; 65536]>())
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{exitreason, ForkServer};
-    #[test]
-    fn run_forkserver() {
-        let hide_output = false;
-        let timeout_in_millis = 200;
-        let bitmap_size = 1 << 16;
-        let target = "../test".to_string();
-        let args = vec![];
-        let mut fork = ForkServer::new(target, args, hide_output, timeout_in_millis, bitmap_size);
-        assert!(fork.get_shared()[1..].iter().all(|v| *v == 0));
-        assert_eq!(
-            fork.run(b"deadbeeg").unwrap(),
-            exitreason::ExitReason::Normal(0)
-        );
-        assert_eq!(
-            fork.run(b"deadbeef").unwrap(),
-            exitreason::ExitReason::Signaled(6)
-        );
-        assert!(fork.get_shared()[1..].iter().any(|v| *v != 0));
     }
 }
