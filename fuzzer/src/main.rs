@@ -124,7 +124,7 @@ fn fuzzing_thread(
         } else {
             for _ in 0..config.number_of_generate_inputs {
                 //If subprocess dies restart forkserver
-                if state.generate_random("START").is_err() {
+                if state.generate_random().is_err() {
                     let args = vec![];
                     let fuzzer = Fuzzer::new(
                         path_to_bin_target.clone(),
@@ -416,7 +416,7 @@ fn main() {
                             .trees()
                     );
                     println!("------------------------------------------------------    ");
-                    /*println!(
+                    println!(
                         "Last ASAN crash:          {}                              ",
                         last_found_asan
                     );
@@ -465,7 +465,7 @@ fn main() {
                         "New paths found by Havoc Rec:    {}                       ",
                         bits_found_by_havoc_rec
                     );
-                    println!("------------------------------------------------------    ");*/
+                    println!("------------------------------------------------------    ");
                     //println!("Global bitmap: {:?}", global_state.lock().expect("RAND_1887203473").bitmaps.get(&false).expect("RAND_1887203473"));
                     thread::sleep(time::Duration::from_secs(1));
                 }

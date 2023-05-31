@@ -122,7 +122,7 @@ impl Fuzzer {
         exec_reason: ExecutionReason,
         ctx: &Context,
     ) -> Result<bool, SubprocessError> {
-        let code: Vec<u8> = tree.unparse_to_vec(ctx);
+        let code = tree.unparse_to_vec(ctx);
         if self.input_is_known(&code) {
             return Ok(false);
         }
@@ -174,25 +174,25 @@ impl Fuzzer {
                 if new_bits.is_some() {
                     match exec_reason {
                         ExecutionReason::Havoc => {
-                            self.bits_found_by_havoc += 1; /*print!("Havoc+")*/
+                            self.bits_found_by_havoc += 1;
                         }
                         ExecutionReason::HavocRec => {
-                            self.bits_found_by_havoc_rec += 1; /*print!("HavocRec+")*/
+                            self.bits_found_by_havoc_rec += 1;
                         }
                         ExecutionReason::Min => {
-                            self.bits_found_by_min += 1; /*print!("Min+")*/
+                            self.bits_found_by_min += 1;
                         }
                         ExecutionReason::MinRec => {
-                            self.bits_found_by_min_rec += 1; /*print!("MinRec+")*/
+                            self.bits_found_by_min_rec += 1;
                         }
                         ExecutionReason::Splice => {
-                            self.bits_found_by_splice += 1; /*print!("Splice+")*/
+                            self.bits_found_by_splice += 1;
                         }
                         ExecutionReason::Det => {
-                            self.bits_found_by_det += 1; /*print!("Det+")*/
+                            self.bits_found_by_det += 1;
                         }
                         ExecutionReason::Gen => {
-                            self.bits_found_by_gen += 1; /*print!("Gen+")*/
+                            self.bits_found_by_gen += 1;
                         }
                     }
                 }
@@ -331,7 +331,7 @@ impl Fuzzer {
             let run_bitmap = self.forksrv.get_shared();
             for (i, &v) in old_bitmap.iter().enumerate() {
                 if run_bitmap[i] != v {
-                    // println!("found fucky bit {i}");
+                    //  println!("found fucky bit {i}");
                 }
             }
             new_bits.retain(|&i| run_bitmap[i] != 0);

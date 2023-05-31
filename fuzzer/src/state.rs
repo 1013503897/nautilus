@@ -1,19 +1,3 @@
-// Nautilus
-// Copyright (C) 2020  Daniel Teuchert, Cornelius Aschermann, Sergej Schumilo
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 use std::collections::HashSet;
 use std::fs::File;
 use std::sync::atomic::Ordering;
@@ -202,14 +186,15 @@ impl FuzzingState {
         Ok(())
     }
 
-    pub fn generate_random(&mut self, nt: &str) -> Result<(), SubprocessError> {
-        let nonterm = self.ctx.nt_id(nt);
+    pub fn generate_random(&mut self) -> Result<(), SubprocessError> {
+        let nonterm = self.ctx.nt_id("START");
         let len = self.ctx.get_random_len_for_nt(&nonterm);
         let tree = self.ctx.generate_tree_from_nt(nonterm, len);
         self.fuzzer
             .run_on_with_dedup(&tree, ExecutionReason::Gen, &self.ctx)?;
         Ok(())
     }
+
     #[allow(dead_code)]
     pub fn inspect(&self, input: &QueueItem) -> String {
         return String::from_utf8_lossy(&input.tree.unparse_to_vec(&self.ctx)).into_owned();
