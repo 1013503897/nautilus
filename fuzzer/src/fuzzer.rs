@@ -331,7 +331,7 @@ impl Fuzzer {
             let run_bitmap = self.forksrv.get_shared();
             for (i, &v) in old_bitmap.iter().enumerate() {
                 if run_bitmap[i] != v {
-                    println!("found fucky bit {i}");
+                    // println!("found fucky bit {i}");
                 }
             }
             new_bits.retain(|&i| run_bitmap[i] != 0);
