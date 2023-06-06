@@ -208,11 +208,11 @@ impl ForkServer {
             );
             assert!(
                 res >= 0,
-                "shmclt {:?}",
+                "shmctl {:?}",
                 CString::from_raw(strerror(errno()))
             );
 
-            let ptr: *mut u8 = trace_bits.cast();
+            let ptr = trace_bits.cast();
             (shm_id, std::slice::from_raw_parts_mut(ptr, bitmap_size))
         }
     }

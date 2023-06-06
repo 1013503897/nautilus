@@ -301,6 +301,7 @@ fn main() {
         "/outputs/queue",
         "/outputs/timeout",
         "/outputs/chunks",
+        "/outputs/testcases",
     ];
     for f in &folders {
         fs::create_dir_all(format!("{}/{f}", config.path_to_workdir))

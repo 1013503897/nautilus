@@ -275,6 +275,12 @@ impl Fuzzer {
         tree_like: &T,
         ctx: &Context,
     ) -> Result<(Option<Vec<usize>>, ExitReason), SubprocessError> {
+        let mut file = File::create(format!(
+            "{}/outputs/testcases/{:09}",
+            self.work_dir, self.execution_count
+        ))
+        .expect("Error creating testcase file");
+        file.write_all(code).expect("Error writing testcase file");
         let (exitreason, execution_time) = self.exec_raw(code)?;
 
         let is_crash = matches!(
@@ -283,7 +289,7 @@ impl Fuzzer {
         );
 
         let mut final_bits = None;
-        if let Some(mut new_bits) = self.new_bits(is_crash) {
+        if let Some(mut new_bits) = self.has_new_bits(is_crash) {
             //Only if not Timeout
             if exitreason != ExitReason::Timeouted {
                 //Check for non deterministic bits
@@ -323,7 +329,7 @@ impl Fuzzer {
         Ok(())
     }
 
-    pub fn new_bits(&mut self, is_crash: bool) -> Option<Vec<usize>> {
+    pub fn has_new_bits(&mut self, is_crash: bool) -> Option<Vec<usize>> {
         let mut res = vec![];
         let run_bitmap = self.forksrv.get_shared();
         let mut gstate_lock = self.global_state.lock().expect("RAND_2040280272");
