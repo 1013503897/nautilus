@@ -5,7 +5,7 @@ if [ $# -eq 1 ]; then
         echo "Invalid parameter $1"
         exit 1
     else
-        current_date=$(date +%Y%m%d)
+        current_date=$(date +%Y%m%d%H%M%S)
         folder_name="work_dir/$1_${current_date}"
         if [ ! -d "$folder_name" ]; then
             mkdir "$folder_name"
