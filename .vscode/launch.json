@@ -4,6 +4,7 @@
         {
             "name": "Lua Fuzzer",
             "type": "lldb",
+            "preLaunchTask": "rust: cargo build",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/fuzzer",
             "args": [
@@ -20,6 +21,7 @@
         {
             "name": "PHP Fuzzer",
             "type": "lldb",
+            "preLaunchTask": "rust: cargo build",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/fuzzer",
             "args": [
@@ -36,6 +38,7 @@
         {
             "name": "Python Fuzzer",
             "type": "lldb",
+            "preLaunchTask": "rust: cargo build",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/fuzzer",
             "args": [
