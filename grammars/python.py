@@ -8,8 +8,8 @@ ctx.rule(u'PROGRAM',u'{STATEMENT}\n{PROGRAM}')
 ctx.rule(u'PROGRAM',u'')
 
 # 单行语句
-ctx.rule(u'STATEMENT',u'pass')
-ctx.rule(u'STATEMENT',u'break')
+# ctx.rule(u'STATEMENT',u'pass')
+# ctx.rule(u'STATEMENT',u'break')
 
 
 #变量被赋值为表达式
