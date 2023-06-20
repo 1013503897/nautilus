@@ -326,6 +326,8 @@ fn main() {
     let status_thread = {
         let global_state = shared.clone();
         let shared_cks = shared_chunkstore.clone();
+        let work_dir = config.path_to_workdir.clone();
+        let bin_target = config.path_to_bin_target.clone();
         thread::Builder::new()
             .name("status_thread".to_string())
             .spawn(move || {
@@ -464,6 +466,11 @@ fn main() {
                         bits_found_by_havoc_rec
                     );
                     println!("------------------------------------------------------    ");
+                    println!("Current working dir:   {}                       ", work_dir);
+                    println!(
+                        "Current target bin:    {}                       ",
+                        bin_target
+                    );
                     //println!("Global bitmap: {:?}", global_state.lock().expect("RAND_1887203473").bitmaps.get(&false).expect("RAND_1887203473"));
                     thread::sleep(time::Duration::from_secs(1));
                 }
