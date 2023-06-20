@@ -1,11 +1,11 @@
 Config(
 	//You probably want to change the follwoing options
 	//File Paths
-	path_to_bin_target:                     "./test",
+	path_to_bin_target:                     "src/lua-5.4.6-bin/src/lua",
 	arguments: 				[ "@@"],	//"@@" will be exchanged with the path of a file containing the current input
 
-	path_to_grammar:                        "test_cases/grammar_regex_root.py",
-	path_to_workdir:                        "/tmp/workdir",
+	path_to_grammar:                        "grammars/lua.py",
+	path_to_workdir:                        "work_dir/lua_bin",
 
 	number_of_threads:			1,
 	timeout_in_millis:			2000,

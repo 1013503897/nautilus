@@ -22,7 +22,7 @@ for file in "$directory"/outputs/queue/*; do
   fi
 done
 
-afl-cov -O -d $directory  -e="$lua_executable 'AFL_FILE'" -c $lua_src
+afl-cov --live -O -d $directory  -e="$lua_executable 'AFL_FILE'" -c $lua_src
 
 echo "starting web server.."
 python3 -m http.server -d $directory/cov/web 80
