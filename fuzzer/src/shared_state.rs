@@ -27,6 +27,7 @@ pub struct GlobalSharedState {
     pub bits_found_by_havoc_rec: u64,
     pub bits_found_by_min: u64,
     pub bits_found_by_min_rec: u64,
+    pub map_density: f32,
     pub bits_found_by_splice: u64,
     pub bits_found_by_det: u64,
     pub bits_found_by_gen: u64,
@@ -77,6 +78,7 @@ impl GlobalSharedState {
             state_saved: String::from("State not saved yet."),
             total_found_asan: 0,
             total_found_sig: 0,
+            map_density: 0.0,
         }
     }
 }

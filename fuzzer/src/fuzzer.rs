@@ -51,7 +51,8 @@ pub struct Fuzzer {
     pub asan_found_by_det: u64,
     pub asan_found_by_det_afl: u64,
     pub asan_found_by_gen: u64,
-    work_dir: String,
+    pub map_density: f32,
+    pub work_dir: String,
 }
 
 impl Fuzzer {
@@ -96,6 +97,7 @@ impl Fuzzer {
             asan_found_by_det: 0,
             asan_found_by_det_afl: 0,
             asan_found_by_gen: 0,
+            map_density: 0.0,
             work_dir,
         }
     }
@@ -156,6 +158,7 @@ impl Fuzzer {
             }
             ExitReason::Normal(_) => {
                 if new_bits.is_some() {
+                    self.map_density += 1.0 / (self.forksrv.bitmap_size as f32);
                     match exec_reason {
                         ExecutionReason::Havoc => {
                             self.bits_found_by_havoc += 1;

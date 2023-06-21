@@ -153,6 +153,7 @@ fn fuzzing_thread(
         stats.average_executions_per_sec += state.fuzzer.average_executions_per_sec as u32;
         stats.average_executions_per_sec -= old_executions_per_sec;
         old_executions_per_sec = state.fuzzer.average_executions_per_sec as u32;
+        stats.map_density = state.fuzzer.map_density;
         if state.fuzzer.bits_found_by_havoc > 0 {
             stats.bits_found_by_havoc += state.fuzzer.bits_found_by_havoc;
             state.fuzzer.bits_found_by_havoc = 0;
@@ -259,7 +260,7 @@ fn main() {
         config.path_to_bin_target
     );
 
-    let shared = Arc::new(Mutex::new(GlobalSharedState::new(
+    let shared: Arc<Mutex<GlobalSharedState>> = Arc::new(Mutex::new(GlobalSharedState::new(
         config.path_to_workdir.clone(),
         config.bitmap_size,
     )));
@@ -351,6 +352,7 @@ fn main() {
                     let last_timeout;
                     let total_found_asan;
                     let total_found_sig;
+                    let map_density;
                     {
                         let shared_state = global_state.lock().expect("RAND_597319831");
                         execution_count = shared_state.execution_count;
@@ -368,6 +370,7 @@ fn main() {
                         last_timeout = shared_state.last_timeout.clone();
                         total_found_asan = shared_state.total_found_asan;
                         total_found_sig = shared_state.total_found_sig;
+                        map_density = shared_state.map_density;
                     }
                     let secs = start_time.elapsed().as_secs();
                     let minutes = secs / 60;
@@ -466,10 +469,17 @@ fn main() {
                         bits_found_by_havoc_rec
                     );
                     println!("------------------------------------------------------    ");
-                    println!("Current working dir:   {}                       ", work_dir);
+                    println!(
+                        "Current working dir:   {}                          ",
+                        work_dir
+                    );
                     println!(
                         "Current target bin:    {}                       ",
                         bin_target
+                    );
+                    println!(
+                        "Map density:           {}%                         ",
+                        map_density * 100.0
                     );
                     //println!("Global bitmap: {:?}", global_state.lock().expect("RAND_1887203473").bitmaps.get(&false).expect("RAND_1887203473"));
                     thread::sleep(time::Duration::from_secs(1));

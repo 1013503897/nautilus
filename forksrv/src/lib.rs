@@ -39,6 +39,7 @@ pub struct ForkServer {
     ctl_in: File,
     shared_data: *mut [u8],
     st_out: std::io::BufReader<TimeoutReader<File>>,
+    pub bitmap_size: usize,
 }
 
 impl ForkServer {
@@ -83,6 +84,7 @@ impl ForkServer {
                     ctl_in: unsafe { File::from_raw_fd(ctl_in) },
                     shared_data,
                     st_out,
+                    bitmap_size,
                 }
             }
             //Child does complex stuff
