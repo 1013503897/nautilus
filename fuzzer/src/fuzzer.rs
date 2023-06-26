@@ -1,19 +1,20 @@
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::fs::File;
-use std::io::stdout;
-use std::io::Write;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Instant;
-
 use chrono::Local;
 use forksrv::exitreason::ExitReason;
 use forksrv::newtypes::SubprocessError;
 use forksrv::ForkServer;
 use grammartec::context::Context;
 use grammartec::tree::TreeLike;
+use memmap::Mmap;
 use shared_state::GlobalSharedState;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::fs::File;
+use std::io::stdout;
+use std::io::Write;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Instant;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionReason {
@@ -126,6 +127,38 @@ impl Fuzzer {
         self.run_on(&code, tree, exec_reason, ctx)
     }
 
+    fn get_coverage(&mut self) -> (String, String) {
+        let lines_path = "/dev/shm/lines_cov";
+        let function_path = "/dev/shm/functons_cov";
+        let lines_cov;
+        let function_cov;
+        if !Path::new(lines_path).exists() {
+            lines_cov = String::from("unknown");
+        } else {
+            let file = std::fs::OpenOptions::new()
+                .read(true)
+                .open(lines_path)
+                .unwrap();
+
+            let mmap = unsafe { Mmap::map(&file).unwrap() };
+
+            lines_cov = std::str::from_utf8(&mmap).unwrap().to_owned();
+        };
+        if !Path::new(function_path).exists() {
+            function_cov = String::from("unknown");
+        } else {
+            let file = std::fs::OpenOptions::new()
+                .read(true)
+                .open(function_path)
+                .unwrap();
+
+            let mmap = unsafe { Mmap::map(&file).unwrap() };
+
+            function_cov = std::str::from_utf8(&mmap).unwrap().to_owned();
+        };
+        return (function_cov, lines_cov);
+    }
+
     fn run_on<T: TreeLike>(
         &mut self,
         code: &[u8],
@@ -134,6 +167,15 @@ impl Fuzzer {
         ctx: &Context,
     ) -> Result<(), SubprocessError> {
         let (new_bits, term_sig) = self.exec(code, tree, ctx)?;
+        let (function_coverage, lines_coverage) = self.get_coverage();
+        self.global_state
+            .lock()
+            .expect("RAND_202860971")
+            .function_coverage = function_coverage;
+        self.global_state
+            .lock()
+            .expect("RAND_202860972")
+            .lines_coverage = lines_coverage;
         match term_sig {
             ExitReason::Normal(223) => {
                 if new_bits.is_some() {
@@ -158,7 +200,6 @@ impl Fuzzer {
             }
             ExitReason::Normal(_) => {
                 if new_bits.is_some() {
-                    self.map_density += 1.0 / (self.forksrv.bitmap_size as f32);
                     match exec_reason {
                         ExecutionReason::Havoc => {
                             self.bits_found_by_havoc += 1;
@@ -341,7 +382,11 @@ impl Fuzzer {
             .get_mut(&is_crash)
             .expect("Bitmap missing! Maybe shared state was not initialized correctly?");
 
+        let mut density = 0;
         for (i, elem) in shared_bitmap.iter_mut().enumerate() {
+            if *elem != 0 {
+                density += 1;
+            }
             if (run_bitmap[i] != 0) && (*elem == 0) {
                 *elem |= run_bitmap[i];
                 res.push(i);
@@ -349,6 +394,7 @@ impl Fuzzer {
             }
         }
 
+        self.map_density = density as f32 / shared_bitmap.len() as f32;
         if !res.is_empty() {
             //print!("New path found:\nNew bits: {:?}\n", res);
             return Some(res);

@@ -9,11 +9,11 @@
             "program": "${workspaceRoot}/target/debug/fuzzer",
             "args": [
                 "-g",
-                "/home/kali/fuzz/nautilus/grammars/lua.py",
+                "grammars/lua.py",
                 "-o",
-                "/home/kali/fuzz/nautilus/work_dir/Lua_debug",
+                "work_dir/Lua_debug",
                 "--",
-                "/home/kali/fuzz/nautilus/src/lua-5.4.6/src/lua",
+                "src/lua-5.4.6/src/lua",
                 "@@"
             ],
             "cwd": "${workspaceRoot}"
@@ -26,11 +26,11 @@
             "program": "${workspaceRoot}/target/debug/fuzzer",
             "args": [
                 "-g",
-                "/home/kali/fuzz/nautilus/grammars/php.py",
+                "grammars/php.py",
                 "-o",
-                "/home/kali/fuzz/nautilus/work_dir/PHP_debug",
+                "work_dir/PHP_debug",
                 "--",
-                "/home/kali/fuzz/nautilus/src/php-src-php-7.2.11/sapi/cli/php",
+                "src/php-src-php-7.2.11/sapi/cli/php",
                 "@@"
             ],
             "cwd": "${workspaceRoot}"
@@ -45,9 +45,9 @@
                 "-g",
                 "grammars/python.py",
                 "-o",
-                "/home/kali/fuzz/nautilus/work_dir/Python_debug",
+                "work_dir/Python_debug",
                 "--",
-                "/home/kali/fuzz/nautilus/src/cpython/python",
+                "src/cpython/python",
                 "@@"
             ],
             "cwd": "${workspaceRoot}"

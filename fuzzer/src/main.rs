@@ -2,6 +2,7 @@ extern crate chrono;
 extern crate clap;
 extern crate forksrv;
 extern crate grammartec;
+extern crate memmap;
 extern crate pyo3;
 extern crate ron;
 extern crate serde;
@@ -353,6 +354,8 @@ fn main() {
                     let total_found_asan;
                     let total_found_sig;
                     let map_density;
+                    let function_coverage;
+                    let lines_coverage;
                     {
                         let shared_state = global_state.lock().expect("RAND_597319831");
                         execution_count = shared_state.execution_count;
@@ -371,6 +374,8 @@ fn main() {
                         total_found_asan = shared_state.total_found_asan;
                         total_found_sig = shared_state.total_found_sig;
                         map_density = shared_state.map_density;
+                        function_coverage = shared_state.function_coverage.clone();
+                        lines_coverage = shared_state.lines_coverage.clone();
                     }
                     let secs = start_time.elapsed().as_secs();
                     let minutes = secs / 60;
@@ -469,17 +474,19 @@ fn main() {
                         bits_found_by_havoc_rec
                     );
                     println!("------------------------------------------------------    ");
+                    println!("Working dir:       {}                          ", work_dir);
+                    println!("Target bin:        {}                       ", bin_target);
                     println!(
-                        "Current working dir:   {}                          ",
-                        work_dir
-                    );
-                    println!(
-                        "Current target bin:    {}                       ",
-                        bin_target
-                    );
-                    println!(
-                        "Map density:           {}%                         ",
+                        "Map density:       {}%                         ",
                         map_density * 100.0
+                    );
+                    println!(
+                        "Lines coverage:    {}                         ",
+                        lines_coverage
+                    );
+                    println!(
+                        "Function coverage: {}                         ",
+                        function_coverage
                     );
                     //println!("Global bitmap: {:?}", global_state.lock().expect("RAND_1887203473").bitmaps.get(&false).expect("RAND_1887203473"));
                     thread::sleep(time::Duration::from_secs(1));
