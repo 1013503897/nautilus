@@ -9,13 +9,17 @@ extern crate serde;
 extern crate serde_json;
 
 mod config;
+mod coverage;
 mod fuzzer;
 mod python_grammar_loader;
 mod queue;
 mod shared_state;
 mod state;
 
+use chrono::Local;
+use clap::{Arg, Command};
 use config::Config;
+use coverage::CoverageInfo;
 use forksrv::newtypes::SubprocessError;
 use fuzzer::Fuzzer;
 use grammartec::chunkstore::ChunkStoreWrapper;
@@ -23,9 +27,6 @@ use grammartec::context::Context;
 use queue::{InputState, QueueItem};
 use shared_state::GlobalSharedState;
 use state::FuzzingState;
-
-use chrono::Local;
-use clap::{Arg, Command};
 use std::fs;
 use std::fs::File;
 use std::io::Read;
@@ -34,7 +35,6 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use std::{thread, time};
-
 fn process_input(
     state: &mut FuzzingState,
     inp: &mut QueueItem,
@@ -72,6 +72,17 @@ fn process_input(
         }
     }
     Ok(())
+}
+
+fn coverage_thread(global_state: &Arc<Mutex<GlobalSharedState>>, config: &Config) {
+    let mut coverage_info = CoverageInfo::new(config.path_to_workdir.clone());
+    coverage_info.start_hermit_cov(config);
+    loop {
+        let mut stats = global_state.lock().expect("RAND_2403514078");
+        coverage_info.get_coverage();
+        stats.func_coverage = coverage_info.func_coverage.clone();
+        stats.lines_coverage = coverage_info.lines_coverage.clone();
+    }
 }
 
 fn fuzzing_thread(
@@ -324,12 +335,22 @@ fn main() {
             .spawn(move || fuzzing_thread(&state, &config, &ctx, &cks))
     });
 
+    // start coverage thread
+    if config.show_coverage {
+        let state = shared.clone();
+        let config = config.clone();
+        thread::Builder::new()
+            .name("coverage_thread".to_string())
+            .spawn(move || coverage_thread(&state, &config))
+            .expect("coverage_thread failed to start");
+    }
     //Start status thread
     let status_thread = {
         let global_state = shared.clone();
         let shared_cks = shared_chunkstore.clone();
         let work_dir = config.path_to_workdir.clone();
         let bin_target = config.path_to_bin_target.clone();
+        let show_coverage = config.show_coverage;
         thread::Builder::new()
             .name("status_thread".to_string())
             .spawn(move || {
@@ -354,7 +375,7 @@ fn main() {
                     let total_found_asan;
                     let total_found_sig;
                     let map_density;
-                    let function_coverage;
+                    let func_coverage;
                     let lines_coverage;
                     {
                         let shared_state = global_state.lock().expect("RAND_597319831");
@@ -374,7 +395,7 @@ fn main() {
                         total_found_asan = shared_state.total_found_asan;
                         total_found_sig = shared_state.total_found_sig;
                         map_density = shared_state.map_density;
-                        function_coverage = shared_state.function_coverage.clone();
+                        func_coverage = shared_state.func_coverage.clone();
                         lines_coverage = shared_state.lines_coverage.clone();
                     }
                     let secs = start_time.elapsed().as_secs();
@@ -480,14 +501,16 @@ fn main() {
                         "Map density:       {}%                         ",
                         map_density * 100.0
                     );
-                    println!(
-                        "Lines coverage:    {}                         ",
-                        lines_coverage
-                    );
-                    println!(
-                        "Function coverage: {}                         ",
-                        function_coverage
-                    );
+                    if show_coverage {
+                        println!(
+                            "Lines coverage:    {}                         ",
+                            lines_coverage
+                        );
+                        println!(
+                            "Function coverage: {}                         ",
+                            func_coverage
+                        );
+                    }
                     //println!("Global bitmap: {:?}", global_state.lock().expect("RAND_1887203473").bitmaps.get(&false).expect("RAND_1887203473"));
                     thread::sleep(time::Duration::from_secs(1));
                 }

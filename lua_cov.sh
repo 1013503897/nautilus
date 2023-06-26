@@ -2,7 +2,7 @@
 
 
 directory=$1
-lua_src="./src/lua-5.4.6-cov/src"
+lua_src="src/lua-5.4.6-cov/src"
 lua_executable="$lua_src/lua"
 timeout=5
 
@@ -35,7 +35,7 @@ for file in "$directory"/outputs/queue/*; do
   fi
 done
 
-afl-cov --live -O -d $directory  -e="$lua_executable 'AFL_FILE'" -c $lua_src
+hermit-cov --live -O -d $directory  -e="$lua_executable 'AFL_FILE'" -c $lua_src
 
 echo "starting web server.."
 python3 -m http.server -d $directory/cov/web 80

@@ -44,7 +44,7 @@ pub struct GlobalSharedState {
     pub state_saved: String,
     pub total_found_asan: u64,
     pub total_found_sig: u64,
-    pub function_coverage: String,
+    pub func_coverage: String,
     pub lines_coverage: String,
 }
 
@@ -81,7 +81,7 @@ impl GlobalSharedState {
             total_found_asan: 0,
             total_found_sig: 0,
             map_density: 0.0,
-            function_coverage: String::from("Unkonwn"),
+            func_coverage: String::from("Unkonwn"),
             lines_coverage: String::from("Unkonwn"),
         }
     }
