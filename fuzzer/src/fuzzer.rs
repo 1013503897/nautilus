@@ -1,10 +1,12 @@
+use crate::message_post::send_samples;
+use crate::sample::Sample;
+use crate::shared_state::GlobalSharedState;
 use chrono::Local;
 use forksrv::exitreason::ExitReason;
 use forksrv::newtypes::SubprocessError;
 use forksrv::ForkServer;
 use grammartec::context::Context;
 use grammartec::tree::TreeLike;
-use shared_state::GlobalSharedState;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fs::File;
@@ -13,7 +15,7 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
-
+use tokio::runtime::Runtime;
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionReason {
     Havoc,
@@ -52,6 +54,9 @@ pub struct Fuzzer {
     pub asan_found_by_gen: u64,
     pub map_density: f32,
     pub work_dir: String,
+    pub addr: String,
+    pub samples_vec: Vec<Sample>,
+    pub container_id: String,
 }
 
 impl Fuzzer {
@@ -63,6 +68,7 @@ impl Fuzzer {
         hide_output: bool,
         timeout_in_millis: u64,
         bitmap_size: usize,
+        addr: String,
     ) -> Self {
         let fs = ForkServer::new(
             path.clone(),
@@ -71,6 +77,7 @@ impl Fuzzer {
             timeout_in_millis,
             bitmap_size,
         );
+        let container_id = std::env::var("HOSTNAME").unwrap_or("unknown".to_string());
         Fuzzer {
             forksrv: fs,
             last_tried_inputs: HashSet::new(),
@@ -98,6 +105,9 @@ impl Fuzzer {
             asan_found_by_gen: 0,
             map_density: 0.0,
             work_dir,
+            samples_vec: vec![],
+            addr,
+            container_id,
         }
     }
 
@@ -299,11 +309,22 @@ impl Fuzzer {
                 if !new_bits.is_empty() {
                     final_bits = Some(new_bits);
                     let tree = tree_like.to_tree(ctx);
-                    self.global_state
+                    let file_path = self
+                        .global_state
                         .lock()
                         .expect("RAND_2835014626")
                         .queue
                         .add(tree, old_bitmap, exitreason, ctx, execution_time);
+                    let sample = Sample::new(self.container_id.clone(), file_path).unwrap();
+                    self.samples_vec.push(sample);
+                    if self.samples_vec.len() >= 3 {
+                        let rt = Runtime::new().unwrap();
+                        rt.block_on(async {
+                            let _res =
+                                send_samples("10.160.151.234:8071", self.samples_vec.clone()).await;
+                        });
+                        self.samples_vec.clear();
+                    }
                     //println!("Entry added to queue! New bits: {:?}", bits.clone().expect("RAND_2243482569"));
                 }
             }

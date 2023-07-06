@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use queue::Queue;
+use crate::queue::Queue;
 use std::collections::HashMap;
 
 pub struct GlobalSharedState {

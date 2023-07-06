@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fs;
-use std::fs::File;
-use std::io::ErrorKind;
-
 use forksrv::exitreason::ExitReason;
 use grammartec::context::Context;
 use grammartec::recursion_info::RecursionInfo;
 use grammartec::tree::Tree;
 use grammartec::tree::TreeLike;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fs;
+use std::fs::File;
+use std::io::ErrorKind;
 
 #[derive(Serialize, Clone, Deserialize)]
 pub enum InputState {
@@ -67,13 +66,13 @@ impl Queue {
         exitreason: ExitReason,
         ctx: &Context,
         execution_time: u32,
-    ) {
+    ) -> String {
         if all_bits
             .iter()
             .enumerate()
             .all(|(i, elem)| (*elem == 0) || self.bit_to_inputs.contains_key(&i))
         {
-            return;
+            return String::new();
         }
         let mut fresh_bits = HashSet::new();
         //Check which bits are new and insert them into fresh_bits
@@ -89,12 +88,12 @@ impl Queue {
             }
         }
 
-        //Create File for entry
-        let mut file = File::create(format!(
+        let file_name = format!(
             "{}/outputs/queue/id:{:09},er:{exitreason:?}",
             self.work_dir, self.current_id
-        ))
-        .expect("RAND_259979732");
+        );
+        //Create File for entry
+        let mut file = File::create(&file_name).expect("file create error");
         tree.unparse_to(ctx, &mut file);
 
         //Add entry to queue
@@ -112,7 +111,8 @@ impl Queue {
             self.current_id = 0;
         } else {
             self.current_id += 1;
-        }
+        };
+        file_name
     }
 
     pub fn new(work_dir: String) -> Self {

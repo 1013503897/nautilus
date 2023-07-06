@@ -4,15 +4,21 @@ extern crate forksrv;
 extern crate grammartec;
 extern crate memmap;
 extern crate pyo3;
+extern crate reqwest;
 extern crate ron;
 extern crate serde;
 extern crate serde_json;
+extern crate serde_repr;
+extern crate sha2;
+extern crate tokio;
 
 mod config;
 mod coverage;
 mod fuzzer;
+mod message_post;
 mod python_grammar_loader;
 mod queue;
+mod sample;
 mod shared_state;
 mod state;
 
@@ -102,6 +108,7 @@ fn fuzzing_thread(
         config.hide_output,
         config.timeout_in_millis,
         config.bitmap_size,
+        config.addr.clone(),
     );
     let mut state = FuzzingState::new(fuzzer, config.clone(), cks.clone());
     state.ctx = ctx.clone();
@@ -122,6 +129,7 @@ fn fuzzing_thread(
                     config.hide_output,
                     config.timeout_in_millis,
                     config.bitmap_size,
+                    config.addr.clone(),
                 );
                 state = FuzzingState::new(fuzzer, config.clone(), cks.clone());
                 state.ctx = ctx.clone();
@@ -146,6 +154,7 @@ fn fuzzing_thread(
                         config.hide_output,
                         config.timeout_in_millis,
                         config.bitmap_size,
+                        config.addr.clone(),
                     );
                     state = FuzzingState::new(fuzzer, config.clone(), cks.clone());
                     state.ctx = ctx.clone();

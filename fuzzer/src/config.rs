@@ -17,4 +17,5 @@ pub struct Config {
     pub arguments: Vec<String>,
     pub hide_output: bool,
     pub show_coverage: bool,
+    pub addr: String,
 }

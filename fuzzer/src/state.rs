@@ -9,10 +9,10 @@ use grammartec::context::Context;
 use grammartec::mutator::Mutator;
 use grammartec::tree::{TreeLike, TreeMutation};
 
-use config::Config;
-use forksrv::newtypes::SubprocessError;
-use fuzzer::{ExecutionReason, Fuzzer};
-use queue::QueueItem;
+use crate::config::Config;
+use crate::forksrv::newtypes::SubprocessError;
+use crate::fuzzer::{ExecutionReason, Fuzzer};
+use crate::queue::QueueItem;
 
 pub struct FuzzingState {
     pub cks: Arc<ChunkStoreWrapper>,
