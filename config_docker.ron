@@ -12,6 +12,7 @@ Config(
 
 	number_of_threads:			1,
 	timeout_in_millis:			2000,
+	addr:						"10.160.151.234:8071",
 
 
 	//The rest of the options are probably not something you want to change... 

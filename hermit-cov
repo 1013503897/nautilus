@@ -13,7 +13,7 @@ import posix_ipc
 import mmap
 import subprocess
 
-__version__ = 'wxy-0.6.3'
+__version__ = 'wxy-0.6.4'
 
 NO_OUTPUT = 0
 WANT_OUTPUT = 1
@@ -28,7 +28,7 @@ def main():
     cargs = parse_cmdline()
 
     if cargs.version:
-        print("afl-cov-" + __version__)
+        print("hermit-cov-" + __version__)
         return exit_success
 
     if cargs.gcov_check or cargs.gcov_check_bin:

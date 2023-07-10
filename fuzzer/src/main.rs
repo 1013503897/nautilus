@@ -99,16 +99,17 @@ fn fuzzing_thread(
 ) {
     let path_to_bin_target = config.path_to_bin_target.clone();
     let args = config.arguments.clone();
-
     let fuzzer = Fuzzer::new(
         path_to_bin_target.clone(),
         args,
         global_state.clone(),
-        config.path_to_workdir.clone(),
         config.hide_output,
         config.timeout_in_millis,
         config.bitmap_size,
         config.addr.clone(),
+        config.path_to_workdir.clone(),
+        config.path_to_src.clone(),
+        config.path_to_bin_target_with_cov.clone(),
     );
     let mut state = FuzzingState::new(fuzzer, config.clone(), cks.clone());
     state.ctx = ctx.clone();
@@ -125,11 +126,13 @@ fn fuzzing_thread(
                     path_to_bin_target.clone(),
                     args,
                     global_state.clone(),
-                    config.path_to_workdir.clone(),
                     config.hide_output,
                     config.timeout_in_millis,
                     config.bitmap_size,
                     config.addr.clone(),
+                    config.path_to_workdir.clone(),
+                    config.path_to_src.clone(),
+                    config.path_to_bin_target_with_cov.clone(),
                 );
                 state = FuzzingState::new(fuzzer, config.clone(), cks.clone());
                 state.ctx = ctx.clone();
@@ -150,11 +153,13 @@ fn fuzzing_thread(
                         path_to_bin_target.clone(),
                         args,
                         global_state.clone(),
-                        config.path_to_workdir.clone(),
                         config.hide_output,
                         config.timeout_in_millis,
                         config.bitmap_size,
                         config.addr.clone(),
+                        config.path_to_workdir.clone(),
+                        config.path_to_src.clone(),
+                        config.path_to_bin_target_with_cov.clone(),
                     );
                     state = FuzzingState::new(fuzzer, config.clone(), cks.clone());
                     state.ctx = ctx.clone();

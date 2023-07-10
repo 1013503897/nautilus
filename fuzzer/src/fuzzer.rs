@@ -1,5 +1,5 @@
-use crate::message_post::send_samples;
-use crate::sample::Sample;
+use crate::message_post;
+use crate::sample::{Sample, SampleType};
 use crate::shared_state::GlobalSharedState;
 use chrono::Local;
 use forksrv::exitreason::ExitReason;
@@ -9,13 +9,15 @@ use grammartec::context::Context;
 use grammartec::tree::TreeLike;
 use std::collections::HashSet;
 use std::collections::VecDeque;
-use std::fs::File;
+use std::fs;
 use std::io::stdout;
 use std::io::Write;
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
 use tokio::runtime::Runtime;
+
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionReason {
     Havoc,
@@ -53,10 +55,12 @@ pub struct Fuzzer {
     pub asan_found_by_det_afl: u64,
     pub asan_found_by_gen: u64,
     pub map_density: f32,
-    pub work_dir: String,
     pub addr: String,
     pub samples_vec: Vec<Sample>,
     pub container_id: String,
+    pub work_dir: String,
+    pub src_dir: String,
+    pub target_cov_path: String,
 }
 
 impl Fuzzer {
@@ -64,11 +68,13 @@ impl Fuzzer {
         path: String,
         args: Vec<String>,
         global_state: Arc<Mutex<GlobalSharedState>>,
-        work_dir: String,
         hide_output: bool,
         timeout_in_millis: u64,
         bitmap_size: usize,
         addr: String,
+        work_dir: String,
+        src_dir: String,
+        target_cov_path: String,
     ) -> Self {
         let fs = ForkServer::new(
             path.clone(),
@@ -104,10 +110,12 @@ impl Fuzzer {
             asan_found_by_det_afl: 0,
             asan_found_by_gen: 0,
             map_density: 0.0,
-            work_dir,
             samples_vec: vec![],
             addr,
             container_id,
+            work_dir,
+            src_dir,
+            target_cov_path,
         }
     }
 
@@ -155,14 +163,20 @@ impl Fuzzer {
                         .lock()
                         .expect("RAND_202860771")
                         .last_found_asan = Local::now().format("[%Y-%m-%d] %H:%M:%S").to_string();
-                    let mut file = File::create(format!(
+                    let file_path = format!(
                         "{}/outputs/signaled/ASAN_{:09}_{}",
                         self.work_dir,
                         self.execution_count,
                         thread::current().name().expect("RAND_4086695190")
-                    ))
-                    .expect("RAND_3096222153");
+                    );
+                    let mut file = fs::File::create(&file_path).expect("RAND_3096222153");
                     tree.unparse_to(ctx, &mut file);
+                    let sample =
+                        Sample::new(&self.container_id, &file_path, SampleType::Crash, 0.0);
+                    let rt = Runtime::new().unwrap();
+                    rt.block_on(async {
+                        let _res = message_post::send_sample(&self.addr, &sample).await;
+                    });
                 }
             }
             ExitReason::Normal(_) => {
@@ -197,12 +211,17 @@ impl Fuzzer {
                     .lock()
                     .expect("RAND_1706238230")
                     .last_timeout = Local::now().format("[%Y-%m-%d] %H:%M:%S").to_string();
-                let mut file = File::create(format!(
+                let file_path = format!(
                     "{}/outputs/timeout/{:09}",
                     self.work_dir, self.execution_count
-                ))
-                .expect("RAND_452993103");
+                );
+                let mut file = fs::File::create(&file_path).expect("RAND_452993103");
                 tree.unparse_to(ctx, &mut file);
+                let sample = Sample::new(&self.container_id, &file_path, SampleType::Timeout, 0.0);
+                let rt = Runtime::new().unwrap();
+                rt.block_on(async {
+                    let _res = message_post::send_sample(&self.addr, &sample).await;
+                });
             }
             ExitReason::Signaled(sig) => {
                 if new_bits.is_some() {
@@ -214,12 +233,19 @@ impl Fuzzer {
                         .lock()
                         .expect("RAND_4287051369")
                         .last_found_sig = Local::now().format("[%Y-%m-%d] %H:%M:%S").to_string();
-                    let mut file = File::create(format!(
+
+                    let file_path = format!(
                         "{}/outputs/signaled/{sig:?}_{:09}",
                         self.work_dir, self.execution_count
-                    ))
-                    .expect("RAND_3690294970");
+                    );
+                    let mut file = fs::File::create(&file_path).expect("RAND_3690294970");
                     tree.unparse_to(ctx, &mut file);
+                    let sample =
+                        Sample::new(&self.container_id, &file_path, SampleType::Crash, 0.0);
+                    let rt = Runtime::new().unwrap();
+                    rt.block_on(async {
+                        let _res = message_post::send_sample(&self.addr, &sample).await;
+                    });
                 }
             }
             ExitReason::Stopped(_sig) => {}
@@ -286,7 +312,7 @@ impl Fuzzer {
         tree_like: &T,
         ctx: &Context,
     ) -> Result<(Option<Vec<usize>>, ExitReason), SubprocessError> {
-        let mut file = File::create(format!(
+        let mut file = fs::File::create(format!(
             "{}/outputs/testcases/{:09}",
             self.work_dir, self.execution_count
         ))
@@ -315,13 +341,20 @@ impl Fuzzer {
                         .expect("RAND_2835014626")
                         .queue
                         .add(tree, old_bitmap, exitreason, ctx, execution_time);
-                    let sample = Sample::new(self.container_id.clone(), file_path).unwrap();
+
+                    let coverage = match self.calc_sample_coverage(&file_path) {
+                        Ok(cov) => cov,
+                        Err(_e) => 0.0,
+                    };
+                    let sample =
+                        Sample::new(&self.container_id, &file_path, SampleType::Normal, coverage);
                     self.samples_vec.push(sample);
-                    if self.samples_vec.len() >= 3 {
+                    // upload every 10 samples
+                    if self.samples_vec.len() >= 10 {
                         let rt = Runtime::new().unwrap();
                         rt.block_on(async {
                             let _res =
-                                send_samples("10.160.151.234:8071", self.samples_vec.clone()).await;
+                                message_post::send_samples(&self.addr, &self.samples_vec).await;
                         });
                         self.samples_vec.clear();
                     }
@@ -379,4 +412,57 @@ impl Fuzzer {
         }
         None
     }
+    pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<f64, String> {
+        let output = Command::new(&self.target_cov_path)
+            .arg(&file_path)
+            .output()
+            .map_err(|_| "Failed to execute the target binary".to_string())?;
+
+        if !output.status.success() {
+            return Err("The target binary returned a non-zero exit code".to_string());
+        }
+
+        let lcov_output = Command::new("lcov")
+            .arg("--capture")
+            .arg("--directory")
+            .arg(&self.src_dir)
+            .arg("--output-file")
+            .arg("coverage.info")
+            .output()
+            .map_err(|_| "Failed to execute the lcov command".to_string())?;
+
+        if !lcov_output.status.success() {
+            return Err("The lcov command returned a non-zero exit code".to_string());
+        }
+
+        let lcov_summary_output = Command::new("lcov")
+            .arg("--summary")
+            .arg("coverage.info")
+            .output()
+            .map_err(|_| "Failed to execute the lcov command for summary".to_string())?;
+
+        let coverage_percentage =
+            extract_coverage_from_summary_output(&lcov_summary_output.stdout)?;
+        Ok(coverage_percentage)
+    }
+}
+fn extract_coverage_from_summary_output(output: &[u8]) -> Result<f64, String> {
+    let output_str =
+        std::str::from_utf8(output).map_err(|_| "Failed to parse lcov summary output")?;
+    let coverage_line = output_str
+        .lines()
+        .find(|line| line.contains("functions..:")) // 找到以"functions..:"开头的行
+        .ok_or("Coverage summary line not found")?;
+
+    let coverage_percentage_str = coverage_line
+        .split_whitespace()
+        .nth(1)
+        .ok_or("Failed to extract coverage percentage")?;
+
+    let coverage_percentage = coverage_percentage_str
+        .trim_end_matches('%')
+        .parse::<f64>()
+        .map_err(|_| "Failed to parse coverage percentage")?;
+
+    Ok(coverage_percentage)
 }
