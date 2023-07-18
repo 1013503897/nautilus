@@ -141,9 +141,7 @@ impl FuzzingState {
     }
 
     pub fn havoc_recursion(&mut self, input: &mut QueueItem) -> Result<(), SubprocessError> {
-        if let Some(ref mut recursions) = input.recursions
-        /* input.tree.calc_recursions() */
-        {
+        if let Some(ref mut recursions) = input.recursions {
             for _i in 0..20 {
                 let ctx = &mut self.ctx;
                 let fuzzer = &mut self.fuzzer;

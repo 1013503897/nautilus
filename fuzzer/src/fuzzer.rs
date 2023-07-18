@@ -312,12 +312,6 @@ impl Fuzzer {
         tree_like: &T,
         ctx: &Context,
     ) -> Result<(Option<Vec<usize>>, ExitReason), SubprocessError> {
-        let mut file = fs::File::create(format!(
-            "{}/outputs/testcases/{:09}",
-            self.work_dir, self.execution_count
-        ))
-        .expect("Error creating testcase file");
-        file.write_all(code).expect("Error writing testcase file");
         let (exitreason, execution_time) = self.exec_raw(code)?;
 
         let is_crash = matches!(
@@ -342,23 +336,30 @@ impl Fuzzer {
                         .queue
                         .add(tree, old_bitmap, exitreason, ctx, execution_time);
 
+                    // get sample coverage
                     let coverage = match self.calc_sample_coverage(&file_path) {
                         Ok(cov) => cov,
                         Err(_e) => 0.0,
                     };
-                    let sample =
-                        Sample::new(&self.container_id, &file_path, SampleType::Normal, coverage);
-                    self.samples_vec.push(sample);
-                    // upload every 10 samples
-                    if self.samples_vec.len() >= 10 {
-                        let rt = Runtime::new().unwrap();
-                        rt.block_on(async {
-                            let _res =
-                                message_post::send_samples(&self.addr, &self.samples_vec).await;
-                        });
-                        self.samples_vec.clear();
+                    if coverage != 0.0 {
+                        // send samples to server
+                        let sample = Sample::new(
+                            &self.container_id,
+                            &file_path,
+                            SampleType::Normal,
+                            coverage,
+                        );
+                        self.samples_vec.push(sample);
+                        // upload every 10 samples
+                        if self.samples_vec.len() >= 10 {
+                            let rt = Runtime::new().unwrap();
+                            rt.block_on(async {
+                                let _res =
+                                    message_post::send_samples(&self.addr, &self.samples_vec).await;
+                            });
+                            self.samples_vec.clear();
+                        }
                     }
-                    //println!("Entry added to queue! New bits: {:?}", bits.clone().expect("RAND_2243482569"));
                 }
             }
         }
@@ -401,13 +402,11 @@ impl Fuzzer {
             if (run_bitmap[i] != 0) && (*elem == 0) {
                 *elem |= run_bitmap[i];
                 res.push(i);
-                //println!("Added new bit to bitmap. Is Crash: {:?}; Added bit: {:?}", is_crash, i);
             }
         }
 
         self.map_density = density as f32 / shared_bitmap.len() as f32;
         if !res.is_empty() {
-            //print!("New path found:\nNew bits: {:?}\n", res);
             return Some(res);
         }
         None

@@ -12,8 +12,8 @@ Config(
 
 	number_of_threads:			1,
 	timeout_in_millis:			2000,
-	addr:						"10.160.151.234:8071",
-
+	server_addr:				"10.160.151.234:8071",
+	redis_addr:					"redis://127.0.0.1/",
 
 	//The rest of the options are probably not something you want to change... 
 	//Forkserver parameter

@@ -1,19 +1,3 @@
-// Nautilus
-// Copyright (C) 2020  Daniel Teuchert, Cornelius Aschermann, Sergej Schumilo
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 use crate::queue::Queue;
 use std::collections::HashMap;
 
@@ -49,8 +33,8 @@ pub struct GlobalSharedState {
 }
 
 impl GlobalSharedState {
-    pub fn new(work_dir: String, bitmap_size: usize) -> Self {
-        let queue = Queue::new(work_dir);
+    pub fn new(work_dir: String, redis_addr: String, bitmap_size: usize) -> Self {
+        let queue = Queue::new(work_dir, redis_addr);
         //Initialize Empty bitmaps for crashes and normal executions
         let mut bitmaps = HashMap::new();
         bitmaps.insert(false, vec![0; bitmap_size]);

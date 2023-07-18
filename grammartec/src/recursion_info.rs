@@ -1,33 +1,19 @@
-// Nautilus
-// Copyright (C) 2020  Daniel Teuchert, Cornelius Aschermann, Sergej Schumilo
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-use rand::rngs::StdRng;
-use rand::thread_rng;
-use rand::SeedableRng;
-use std::collections::HashMap;
-use std::fmt;
-
 use context::Context;
 use loaded_dice::LoadedDiceSampler;
 use newtypes::{NTermID, NodeID};
+use rand::rngs::StdRng;
+use rand::thread_rng;
+use rand::SeedableRng;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt;
 use tree::Tree;
 
+#[derive(Serialize, Clone, Deserialize)]
 pub struct RecursionInfo {
     recursive_parents: HashMap<NodeID, NodeID>,
-    sampler: LoadedDiceSampler<StdRng>,
+    #[serde(skip)]
+    sampler: Option<LoadedDiceSampler<StdRng>>,
     depth_by_offset: Vec<usize>,
     node_by_offset: Vec<NodeID>,
 }
@@ -50,7 +36,7 @@ impl RecursionInfo {
         let sampler = RecursionInfo::build_sampler(&depth_by_offset);
         Some(Self {
             recursive_parents,
-            sampler,
+            sampler: Some(sampler),
             depth_by_offset,
             node_by_offset,
         })
@@ -106,7 +92,7 @@ impl RecursionInfo {
     }
 
     pub fn get_random_recursion_pair(&mut self) -> (NodeID, NodeID) {
-        let offset = self.sampler.sample();
+        let offset = self.sampler.clone().unwrap().sample();
         self.get_recursion_pair_by_offset(offset)
     }
 

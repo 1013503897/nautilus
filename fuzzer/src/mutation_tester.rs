@@ -1,19 +1,3 @@
-// Nautilus
-// Copyright (C) 2020  Daniel Teuchert, Cornelius Aschermann, Sergej Schumilo
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 extern crate grammartec;
 extern crate ron;
 extern crate serde_json;
@@ -41,8 +25,8 @@ fn main() {
             .expect("RAND_1541841394")
             .parse::<usize>()
             .expect("RAND_1541841394");
-        let tree_path = env::args().nth(2).expect("RAND_2127457155");
-        let grammar_path = env::args().nth(3).expect("RAND_418548630");
+        let tree_path = env::args().nth(2).expect("get tree_path error");
+        let grammar_path = env::args().nth(3).expect("get grammar_path error");
         let method = match env::args().nth(4).expect("RAND_1161906828").as_ref() {
             "havoc" => MutationMethods::Havoc,
             "rec" => MutationMethods::HavocRec,

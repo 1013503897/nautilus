@@ -4,6 +4,7 @@ extern crate forksrv;
 extern crate grammartec;
 extern crate memmap;
 extern crate pyo3;
+extern crate redis;
 extern crate reqwest;
 extern crate ron;
 extern crate serde;
@@ -31,6 +32,7 @@ use fuzzer::Fuzzer;
 use grammartec::chunkstore::ChunkStoreWrapper;
 use grammartec::context::Context;
 use queue::{InputState, QueueItem};
+use serde::{Deserialize, Serialize};
 use shared_state::GlobalSharedState;
 use state::FuzzingState;
 use std::fs;
@@ -41,6 +43,8 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use std::{thread, time};
+
+// mutate the input tree
 fn process_input(
     state: &mut FuzzingState,
     inp: &mut QueueItem,
@@ -106,7 +110,7 @@ fn fuzzing_thread(
         config.hide_output,
         config.timeout_in_millis,
         config.bitmap_size,
-        config.addr.clone(),
+        config.server_addr.clone(),
         config.path_to_workdir.clone(),
         config.path_to_src.clone(),
         config.path_to_bin_target_with_cov.clone(),
@@ -117,7 +121,7 @@ fn fuzzing_thread(
     let mut old_executions_per_sec = 0;
     //Normal mode
     loop {
-        let inp = global_state.lock().expect("RAND_2191486322").queue.pop();
+        let inp = global_state.lock().expect("cann't get queue!").queue.pop();
         if let Some(mut inp) = inp {
             //If subprocess died restart forkserver
             if process_input(&mut state, &mut inp, config).is_err() {
@@ -129,7 +133,7 @@ fn fuzzing_thread(
                     config.hide_output,
                     config.timeout_in_millis,
                     config.bitmap_size,
-                    config.addr.clone(),
+                    config.server_addr.clone(),
                     config.path_to_workdir.clone(),
                     config.path_to_src.clone(),
                     config.path_to_bin_target_with_cov.clone(),
@@ -156,7 +160,7 @@ fn fuzzing_thread(
                         config.hide_output,
                         config.timeout_in_millis,
                         config.bitmap_size,
-                        config.addr.clone(),
+                        config.server_addr.clone(),
                         config.path_to_workdir.clone(),
                         config.path_to_src.clone(),
                         config.path_to_bin_target_with_cov.clone(),
@@ -209,6 +213,14 @@ fn fuzzing_thread(
             state.fuzzer.bits_found_by_min_rec = 0;
         }
     }
+}
+
+// 自定义结构体
+#[derive(Debug, Serialize, Deserialize)]
+struct MyStruct {
+    id: u32,
+    name: String,
+    // 添加其他字段
 }
 
 fn main() {
@@ -288,6 +300,7 @@ fn main() {
 
     let shared: Arc<Mutex<GlobalSharedState>> = Arc::new(Mutex::new(GlobalSharedState::new(
         config.path_to_workdir.clone(),
+        config.redis_addr.clone(),
         config.bitmap_size,
     )));
     let shared_chunkstore = Arc::new(ChunkStoreWrapper::new(config.path_to_workdir.clone()));
@@ -375,7 +388,6 @@ fn main() {
                 loop {
                     let execution_count;
                     let average_executions_per_sec;
-                    let queue_len;
                     let bits_found_by_gen;
                     let bits_found_by_min;
                     let bits_found_by_min_rec;
@@ -395,7 +407,6 @@ fn main() {
                         let shared_state = global_state.lock().expect("RAND_597319831");
                         execution_count = shared_state.execution_count;
                         average_executions_per_sec = shared_state.average_executions_per_sec;
-                        queue_len = shared_state.queue.len();
                         bits_found_by_gen = shared_state.bits_found_by_gen;
                         bits_found_by_min = shared_state.bits_found_by_min;
                         bits_found_by_min_rec = shared_state.bits_found_by_min_rec;
@@ -439,10 +450,6 @@ fn main() {
                     println!(
                         "Executions per Sec:       {}                              ",
                         average_executions_per_sec
-                    );
-                    println!(
-                        "Left in queue:            {}                              ",
-                        queue_len
                     );
                     let now = Instant::now();
                     while shared_cks.is_locked.load(Ordering::SeqCst) {

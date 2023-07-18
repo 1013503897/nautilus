@@ -3,6 +3,7 @@ use grammartec::context::Context;
 use grammartec::recursion_info::RecursionInfo;
 use grammartec::tree::Tree;
 use grammartec::tree::TreeLike;
+use redis::Commands;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -17,6 +18,7 @@ pub enum InputState {
     Random,
 }
 
+#[derive(Serialize, Clone, Deserialize)]
 pub struct QueueItem {
     pub id: usize,
     pub tree: Tree,
@@ -51,11 +53,12 @@ impl QueueItem {
 }
 
 pub struct Queue {
-    pub inputs: Vec<QueueItem>,
     pub processed: Vec<QueueItem>,
     pub bit_to_inputs: HashMap<usize, Vec<usize>>,
     pub current_id: usize,
     pub work_dir: String,
+    pub con: redis::Client,
+    pub list_key: String,
 }
 
 impl Queue {
@@ -96,15 +99,17 @@ impl Queue {
         let mut file = File::create(&file_name).expect("file create error");
         tree.unparse_to(ctx, &mut file);
 
-        //Add entry to queue
-        self.inputs.push(QueueItem::new(
+        let inp = QueueItem::new(
             self.current_id,
             tree,
             fresh_bits,
             all_bits,
             exitreason,
             execution_time,
-        ));
+        );
+
+        // Add entry to queue
+        self.add_to_redis(&inp);
 
         //Increase current_id
         if self.current_id == usize::max_value() {
@@ -115,26 +120,23 @@ impl Queue {
         file_name
     }
 
-    pub fn new(work_dir: String) -> Self {
+    pub fn new(work_dir: String, redis_addr: String) -> Self {
         Queue {
-            inputs: vec![],
             processed: vec![],
             bit_to_inputs: HashMap::new(),
             current_id: 0,
             work_dir,
+            con: redis::Client::open(redis_addr).unwrap(),
+            list_key: String::from("my_list_data"),
         }
     }
 
     pub fn pop(&mut self) -> Option<QueueItem> {
-        let option = self.inputs.pop();
+        let option = self.pop_from_redis();
         if let Some(item) = option {
             let id = item.id;
-            let mut keys = Vec::with_capacity(self.bit_to_inputs.keys().len()); //TODO: Find a better solution for this
-            {
-                for k in self.bit_to_inputs.keys() {
-                    keys.push(*k);
-                }
-            }
+            let keys: Vec<_> = self.bit_to_inputs.keys().cloned().collect();
+
             for k in keys {
                 let mut v = self.bit_to_inputs.remove(&k).expect("RAND_2593710501");
                 v.retain(|&x| x != id);
@@ -180,11 +182,37 @@ impl Queue {
         self.processed.push(item);
     }
 
-    pub fn len(&self) -> usize {
-        self.inputs.len()
+    pub fn len(&mut self) -> usize {
+        self.con.llen(&self.list_key).unwrap()
+    }
+
+    fn push_to_list<T: redis::ToRedisArgs>(&mut self, items: &[T]) -> redis::RedisResult<()> {
+        self.con.rpush(&self.list_key, items)
     }
 
     pub fn new_round(&mut self) {
-        self.inputs.append(&mut self.processed);
+        let json_vec: Vec<_> = self
+            .processed
+            .iter()
+            .map(|item| serde_json::to_string(&item).unwrap())
+            .collect();
+
+        self.push_to_list(&json_vec);
+    }
+
+    pub fn add_to_redis(&mut self, item: &QueueItem) -> redis::RedisResult<()> {
+        let json_data = serde_json::to_string(&item).unwrap();
+        self.con.rpush(&self.list_key, json_data)
+    }
+
+    pub fn pop_from_redis(&mut self) -> Option<QueueItem> {
+        let json_data: Result<String, _> = self.con.lpop(&self.list_key, None);
+        match json_data {
+            Ok(data) => match serde_json::from_str::<QueueItem>(&data) {
+                Ok(item) => Some(item),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        }
     }
 }
