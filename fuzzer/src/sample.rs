@@ -3,6 +3,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read;
+use std::path::Path;
 
 #[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
 #[repr(u32)]
@@ -21,7 +22,8 @@ pub struct Sample {
     sample_type: SampleType,
     hash: String,
     size: usize,
-    coverage: f64,
+    func_coverage: f32,
+    lines_coverage: f32,
     log: String,
 }
 
@@ -30,14 +32,20 @@ impl Sample {
         container_id: &str,
         file_path: &str,
         sample_type: SampleType,
-        coverage: f64,
-    ) -> Sample {
+        func_coverage: f32,
+        lines_coverage: f32,
+    ) -> Result<Sample, Box<dyn std::error::Error>> {
+        // Check if the file exists
+        if !Path::new(&file_path).exists() {
+            return Err(format!("File not found: {}", file_path).into());
+        }
+
         // Compute size
-        let metadata = fs::metadata(&file_path).unwrap();
+        let metadata = fs::metadata(&file_path)?;
         let size = metadata.len() as usize;
 
         // Compute hash
-        let mut file = fs::File::open(&file_path).unwrap();
+        let mut file = fs::File::open(&file_path)?;
         let mut buffer = Vec::new();
         if file.read_to_end(&mut buffer).is_err() {
             panic!("Failed to read file");
@@ -46,15 +54,16 @@ impl Sample {
         hasher.update(&buffer);
         let hash = format!("{:x}", hasher.finalize());
 
-        let content = String::from_utf8(buffer).unwrap();
-        Sample {
+        let content = String::from_utf8(buffer)?;
+        Ok(Sample {
             container_id: String::from(container_id),
             content,
             sample_type,
             hash,
             size,
-            coverage,
+            func_coverage,
+            lines_coverage,
             log: String::from("default_log"),
-        }
+        })
     }
 }

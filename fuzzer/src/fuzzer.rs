@@ -440,7 +440,7 @@ impl Fuzzer {
         }
         None
     }
-    pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<(f64, f64), String> {
+    pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<(f32, f32), String> {
         let output = Command::new(&self.target_cov_path)
             .arg(&file_path)
             .output()
@@ -475,7 +475,7 @@ impl Fuzzer {
     }
 }
 
-fn extract_coverage_from_summary_output(output: &[u8]) -> Result<(f64, f64), String> {
+fn extract_coverage_from_summary_output(output: &[u8]) -> Result<(f32, f32), String> {
     let output_str =
         std::str::from_utf8(output).map_err(|_| "Failed to parse lcov summary output")?;
     let func_coverage_line = output_str
@@ -490,7 +490,7 @@ fn extract_coverage_from_summary_output(output: &[u8]) -> Result<(f64, f64), Str
 
     let func_coverage_percentage = func_coverage_percentage_str
         .trim_end_matches('%')
-        .parse::<f64>()
+        .parse::<f32>()
         .map_err(|_| "Failed to parse coverage percentage")?;
 
     let lines_coverage_line = output_str
@@ -505,7 +505,7 @@ fn extract_coverage_from_summary_output(output: &[u8]) -> Result<(f64, f64), Str
 
     let lines_coverage_percentage = lines_coverage_percentage_str
         .trim_end_matches('%')
-        .parse::<f64>()
+        .parse::<f32>()
         .map_err(|_| "Failed to parse coverage percentage")?;
 
     Ok((func_coverage_percentage, lines_coverage_percentage))

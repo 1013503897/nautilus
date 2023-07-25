@@ -12,6 +12,8 @@ sha2 = "0.9"
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 memmap = "0.7.0"
+log = "0.4"
+fern = "0.6.2"
 nix = "0.26"
 chrono = { version = "0.4", default-features = false, features = ["clock"]}
 grammartec = {path = "../grammartec", version = "0.3"}

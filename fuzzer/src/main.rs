@@ -1,7 +1,9 @@
 extern crate chrono;
 extern crate clap;
+extern crate fern;
 extern crate forksrv;
 extern crate grammartec;
+extern crate log;
 extern crate memmap;
 extern crate pyo3;
 extern crate redis;
@@ -22,17 +24,19 @@ mod queue;
 mod sample;
 mod shared_state;
 mod state;
+mod status;
 
-use chrono::Local;
 use clap::{Arg, Command};
 use config::Config;
 use coverage::CoverageInfo;
+
 use forksrv::newtypes::SubprocessError;
 use fuzzer::Fuzzer;
 use grammartec::chunkstore::ChunkStoreWrapper;
 use grammartec::context::Context;
+#[allow(unused_imports)]
+use log::{debug, error, info, warn};
 use queue::{InputState, QueueItem};
-use serde::{Deserialize, Serialize};
 use shared_state::GlobalSharedState;
 use state::FuzzingState;
 use std::fs;
@@ -43,6 +47,9 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use std::{thread, time};
+use tokio::runtime::Runtime;
+
+use crate::message_post::send_status_param;
 
 // mutate the input tree
 fn process_input(
@@ -84,14 +91,40 @@ fn process_input(
     Ok(())
 }
 
+fn setup_logger(log_path: &str) -> Result<(), fern::InitError> {
+    if log_path.is_empty() {
+        return Ok(());
+    }
+
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                record.level(),
+                record.target(),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Info)
+        .chain(fern::log_file(log_path)?)
+        .apply()?;
+
+    Ok(())
+}
+
 fn coverage_thread(global_state: &Arc<Mutex<GlobalSharedState>>, config: &Config) {
-    let mut coverage_info = CoverageInfo::new(config.path_to_workdir.clone());
+    let mut coverage_info = CoverageInfo::new();
     coverage_info.start_hermit_cov(config);
     loop {
-        let mut stats = global_state.lock().expect("RAND_2403514078");
+        thread::sleep(time::Duration::from_secs(2));
+        let mut stats = global_state.lock().expect("get global_state error!");
         coverage_info.get_coverage();
-        stats.func_coverage = coverage_info.func_coverage.clone();
-        stats.lines_coverage = coverage_info.lines_coverage.clone();
+        if coverage_info.lines_coverage == 0.0 || coverage_info.func_coverage == 0.0 {
+            continue;
+        }
+        stats.func_coverage = coverage_info.func_coverage;
+        stats.lines_coverage = coverage_info.lines_coverage;
     }
 }
 
@@ -180,9 +213,9 @@ fn fuzzing_thread(
         let mut stats = global_state.lock().expect("RAND_2403514078");
         stats.execution_count += state.fuzzer.execution_count - old_execution_count;
         old_execution_count = state.fuzzer.execution_count;
-        stats.average_executions_per_sec += state.fuzzer.average_executions_per_sec as u32;
-        stats.average_executions_per_sec -= old_executions_per_sec;
-        old_executions_per_sec = state.fuzzer.average_executions_per_sec as u32;
+        stats.average_executions_per_sec += state.fuzzer.average_executions_per_sec;
+        stats.average_executions_per_sec -= old_executions_per_sec as f32;
+        old_executions_per_sec = state.fuzzer.average_executions_per_sec as u64;
         stats.map_density = state.fuzzer.map_density;
         if state.fuzzer.bits_found_by_havoc > 0 {
             stats.bits_found_by_havoc += state.fuzzer.bits_found_by_havoc;
@@ -215,17 +248,9 @@ fn fuzzing_thread(
     }
 }
 
-// 自定义结构体
-#[derive(Debug, Serialize, Deserialize)]
-struct MyStruct {
-    id: u32,
-    name: String,
-    // 添加其他字段
-}
-
 fn main() {
     //Parse parameters
-    let matches = Command::new("nautilus")
+    let matches = Command::new("hermitcrab")
         .about("Grammar fuzzer")
         .arg(
             Arg::new("config")
@@ -258,10 +283,7 @@ fn main() {
         .get_one::<String>("config")
         .expect("the path to the configuration file has a default value");
 
-    println!(
-        "{} Starting Fuzzing...",
-        Local::now().format("[%Y-%m-%d] %H:%M:%S")
-    );
+    info!("Starting Fuzzing...");
 
     //Set Config
     let mut config_file = File::open(config_file_path).expect("cannot read config file");
@@ -272,6 +294,7 @@ fn main() {
     let mut config: Config =
         ron::de::from_str(&config_file_contents).expect("Failed to deserialize");
 
+    setup_logger(&config.path_to_log).expect("error setup_logger!");
     let workdir = matches
         .get_one("workdir")
         .unwrap_or(&config.path_to_workdir)
@@ -378,6 +401,8 @@ fn main() {
         let work_dir = config.path_to_workdir.clone();
         let bin_target = config.path_to_bin_target.clone();
         let show_coverage = config.show_coverage;
+        let server_addr = config.server_addr.clone();
+        let container_id = std::env::var("HOSTNAME").unwrap_or("unknown".to_string());
         thread::Builder::new()
             .name("status_thread".to_string())
             .spawn(move || {
@@ -428,6 +453,21 @@ fn main() {
                     let hours = minutes / 60;
                     let days = hours / 24;
 
+                    let status = status::Status {
+                        container_id: container_id.clone(),
+                        // container_id: format!("0b9795c16f22"),
+                        line_coverage: format!("{}%", lines_coverage),
+                        function_coverage: format!("{}%", func_coverage),
+                        last_crash_time: last_found_sig.clone(),
+                        last_timeout_time: last_timeout.clone(),
+                        map_density,
+                        sample_count: execution_count,
+                        crash_count: total_found_sig,
+                        sample_run_rate: average_executions_per_sec,
+                    };
+                    Runtime::new().unwrap().block_on(async {
+                        let _res = send_status_param(&server_addr, &status).await;
+                    });
                     print!("{}[H", 27 as char);
                     println!(" _   _                     _ _    ____           _     ");
                     println!("| | | | ___ _ __ _ __ ___ (_) |_ / ___|_ __ __ _| |__  ");
@@ -524,23 +564,23 @@ fn main() {
                     );
                     if show_coverage {
                         println!(
-                            "Lines coverage:    {}                         ",
+                            "Lines coverage:    {}%                         ",
                             lines_coverage
                         );
                         println!(
-                            "Function coverage: {}                         ",
+                            "Function coverage: {}%                         ",
                             func_coverage
                         );
                     }
-                    //println!("Global bitmap: {:?}", global_state.lock().expect("RAND_1887203473").bitmaps.get(&false).expect("RAND_1887203473"));
                     thread::sleep(time::Duration::from_secs(1));
                 }
             })
-            .expect("RAND_3541874337")
+            .expect("status_thread failed to start")
     };
 
     for t in threads.collect::<Vec<_>>() {
         t.expect("RAND_2698731594").join().expect("RAND_2698731594");
     }
-    status_thread.join().expect("RAND_399292929");
+    status_thread.join().expect("status_thread error");
+    warn!("exit??");
 }

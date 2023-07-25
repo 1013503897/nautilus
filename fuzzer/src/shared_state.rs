@@ -6,7 +6,7 @@ pub struct GlobalSharedState {
     //false for not crashing input. True for crashing inputs
     pub bitmaps: HashMap<bool, Vec<u8>>,
     pub execution_count: u64,
-    pub average_executions_per_sec: u32,
+    pub average_executions_per_sec: f32,
     pub bits_found_by_havoc: u64,
     pub bits_found_by_havoc_rec: u64,
     pub bits_found_by_min: u64,
@@ -28,8 +28,8 @@ pub struct GlobalSharedState {
     pub state_saved: String,
     pub total_found_asan: u64,
     pub total_found_sig: u64,
-    pub func_coverage: String,
-    pub lines_coverage: String,
+    pub func_coverage: f32,
+    pub lines_coverage: f32,
 }
 
 impl GlobalSharedState {
@@ -43,7 +43,7 @@ impl GlobalSharedState {
             queue,
             bitmaps,
             execution_count: 0,
-            average_executions_per_sec: 0,
+            average_executions_per_sec: 0.0,
             bits_found_by_havoc: 0,
             bits_found_by_havoc_rec: 0,
             bits_found_by_min: 0,
@@ -65,8 +65,8 @@ impl GlobalSharedState {
             total_found_asan: 0,
             total_found_sig: 0,
             map_density: 0.0,
-            func_coverage: String::from("Unkonwn"),
-            lines_coverage: String::from("Unkonwn"),
+            func_coverage: 0.0,
+            lines_coverage: 0.0,
         }
     }
 }

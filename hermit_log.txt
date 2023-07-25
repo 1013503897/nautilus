@@ -1,0 +1,42 @@
+[2023-07-25][23:44:53][INFO][fuzzer::fuzzer] container_id: unknown
+[2023-07-25][23:47:29][INFO][fuzzer::fuzzer] container_id: unknown
+[2023-07-25][23:47:31][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000002,er:Normal(0) func_cov: 49.7%; line_cov: 44%
+[2023-07-25][23:47:34][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000017,er:Normal(0) func_cov: 49.7%; line_cov: 44%
+[2023-07-25][23:47:35][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000018,er:Normal(0) func_cov: 49.7%; line_cov: 44%
+[2023-07-25][23:47:37][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000019,er:Normal(0) func_cov: 49.7%; line_cov: 44%
+[2023-07-25][23:47:38][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000020,er:Normal(0) func_cov: 49.7%; line_cov: 44%
+[2023-07-25][23:47:41][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000043,er:Normal(0) func_cov: 49.8%; line_cov: 44.3%
+[2023-07-25][23:47:43][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000044,er:Normal(0) func_cov: 49.8%; line_cov: 44.3%
+[2023-07-25][23:47:45][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000052,er:Normal(0) func_cov: 49.8%; line_cov: 44.3%
+[2023-07-25][23:47:46][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000053,er:Normal(0) func_cov: 49.8%; line_cov: 44.4%
+[2023-07-25][23:47:47][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000054,er:Normal(0) func_cov: 49.8%; line_cov: 44.4%
+[2023-07-25][23:47:47][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:47:51][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:47:53][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:47:54][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000070,er:Normal(0) func_cov: 50.3%; line_cov: 44.8%
+[2023-07-25][23:47:59][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:48:02][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000111,er:Normal(0) func_cov: 51%; line_cov: 45.2%
+[2023-07-25][23:48:04][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000114,er:Normal(0) func_cov: 51%; line_cov: 45.2%
+[2023-07-25][23:48:08][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000142,er:Normal(0) func_cov: 51%; line_cov: 45.3%
+[2023-07-25][23:48:13][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000173,er:Normal(0) func_cov: 51.2%; line_cov: 45.6%
+[2023-07-25][23:48:14][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000174,er:Normal(0) func_cov: 51.2%; line_cov: 45.6%
+[2023-07-25][23:48:17][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000189,er:Normal(0) func_cov: 52.3%; line_cov: 46.1%
+[2023-07-25][23:48:19][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000198,er:Normal(0) func_cov: 52.3%; line_cov: 46.2%
+[2023-07-25][23:48:21][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000199,er:Normal(0) func_cov: 52.3%; line_cov: 46.2%
+[2023-07-25][23:48:22][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000200,er:Normal(0) func_cov: 52.3%; line_cov: 46.3%
+[2023-07-25][23:48:22][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:48:23][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000201,er:Normal(0) func_cov: 52.3%; line_cov: 46.3%
+[2023-07-25][23:48:25][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000202,er:Normal(0) func_cov: 52.3%; line_cov: 46.3%
+[2023-07-25][23:48:29][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000229,er:Normal(0) func_cov: 52.4%; line_cov: 46.6%
+[2023-07-25][23:48:31][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000231,er:Normal(0) func_cov: 52.4%; line_cov: 46.6%
+[2023-07-25][23:48:33][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000238,er:Normal(0) func_cov: 52.4%; line_cov: 46.6%
+[2023-07-25][23:48:36][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000249,er:Normal(0) func_cov: 52.4%; line_cov: 46.7%
+[2023-07-25][23:48:39][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000260,er:Normal(0) func_cov: 52.4%; line_cov: 46.7%
+[2023-07-25][23:48:42][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000270,er:Normal(0) func_cov: 52.4%; line_cov: 46.8%
+[2023-07-25][23:48:43][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000274,er:Normal(0) func_cov: 52.5%; line_cov: 47%
+[2023-07-25][23:48:45][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000275,er:Normal(0) func_cov: 52.5%; line_cov: 47.1%
+[2023-07-25][23:48:45][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:48:47][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:48:49][INFO][fuzzer::message_post] Successfully sent samples
+[2023-07-25][23:48:51][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000284,er:Normal(0) func_cov: 53.2%; line_cov: 47.4%
+[2023-07-25][23:48:53][INFO][fuzzer::fuzzer] sample work_dir/Lua_debug/outputs/queue/id:000000287,er:Normal(0) func_cov: 53.2%; line_cov: 47.4%

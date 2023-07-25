@@ -19,4 +19,5 @@ pub struct Config {
     pub show_coverage: bool,
     pub server_addr: String,
     pub redis_addr: String,
+    pub path_to_log: String,
 }

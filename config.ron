@@ -8,10 +8,12 @@ Config(
 	path_to_workdir:                        "work_dir/Lua_debug",
 	path_to_bin_target_with_cov:			"src/lua-5.4.6-cov/src/lua",
 	path_to_src:							"src/lua-5.4.6-cov/src",
+	path_to_log:							"hermit_log.txt",
 
 	number_of_threads:			1,
 	timeout_in_millis:			2000,
-	addr:						"10.160.151.234:8071", //IP and Port of the web server
+	server_addr:				"10.160.151.234:8071", //IP and Port of the web server
+	redis_addr:					"redis://10.160.151.234:6379",
 
 	//The rest of the options are probably not something you want to change... 
 	//Forkserver parameter

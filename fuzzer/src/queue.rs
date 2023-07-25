@@ -109,7 +109,7 @@ impl Queue {
         );
 
         // Add entry to queue
-        self.add_to_redis(&inp);
+        self.add_to_redis(&inp).expect("Failed to add to redis");
 
         //Increase current_id
         if self.current_id == usize::max_value() {
@@ -127,7 +127,7 @@ impl Queue {
             current_id: 0,
             work_dir,
             con: redis::Client::open(redis_addr).unwrap(),
-            list_key: String::from("my_list_data"),
+            list_key: std::env::var("HOSTNAME").unwrap_or("unknown".to_string()),
         }
     }
 
@@ -182,6 +182,7 @@ impl Queue {
         self.processed.push(item);
     }
 
+    #[allow(dead_code)]
     pub fn len(&mut self) -> usize {
         self.con.llen(&self.list_key).unwrap()
     }
@@ -197,7 +198,8 @@ impl Queue {
             .map(|item| serde_json::to_string(&item).unwrap())
             .collect();
 
-        self.push_to_list(&json_vec);
+        self.push_to_list(&json_vec)
+            .expect("Failed to push to redis");
     }
 
     pub fn add_to_redis(&mut self, item: &QueueItem) -> redis::RedisResult<()> {

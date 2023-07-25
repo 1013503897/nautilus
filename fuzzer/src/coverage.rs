@@ -4,17 +4,16 @@ use std::fs::OpenOptions;
 use std::process::{Command, Stdio};
 
 pub struct CoverageInfo {
-    pub lines_coverage: String,
-    pub func_coverage: String,
+    pub lines_coverage: f32,
+    pub func_coverage: f32,
     shm_lines: Mmap,
     shm_func: Mmap,
 }
 
 impl CoverageInfo {
-    pub fn new(work_dir: String) -> Self {
-        let index = &work_dir[work_dir.rfind('_').unwrap() + 1..];
-        let lines_path = format!("{}{}", "/dev/shm/lines_cov_", index);
-        let func_path = format!("{}{}", "/dev/shm/func_cov_", index);
+    pub fn new() -> Self {
+        let lines_path = "/dev/shm/lines_cov".to_string();
+        let func_path = "/dev/shm/func_cov".to_string();
 
         let lines_file = OpenOptions::new()
             .read(true)
@@ -42,16 +41,31 @@ impl CoverageInfo {
         let shm_func =
             unsafe { Mmap::map(&function_file).expect("Failed to create shared memory mapping") };
         CoverageInfo {
-            lines_coverage: String::new(),
-            func_coverage: String::new(),
+            lines_coverage: 0.0,
+            func_coverage: 0.0,
             shm_lines,
             shm_func,
         }
     }
 
     pub fn get_coverage(&mut self) {
-        self.lines_coverage = std::str::from_utf8(&self.shm_lines).unwrap().to_owned();
-        self.func_coverage = std::str::from_utf8(&self.shm_func).unwrap().to_owned();
+        let lines_coverage = std::str::from_utf8(&self.shm_lines)
+            .unwrap()
+            .to_owned()
+            .trim_end_matches('\0')
+            .parse::<f32>()
+            .unwrap_or(0.0);
+
+        self.lines_coverage = self.lines_coverage.max(lines_coverage);
+
+        let func_coverage = std::str::from_utf8(&self.shm_func)
+            .unwrap()
+            .to_owned()
+            .trim_end_matches('\0')
+            .parse::<f32>()
+            .unwrap_or(0.0);
+
+        self.func_coverage = self.func_coverage.max(func_coverage);
     }
 
     pub fn start_hermit_cov(&mut self, config: &Config) {
