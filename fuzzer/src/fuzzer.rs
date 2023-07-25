@@ -7,6 +7,8 @@ use forksrv::newtypes::SubprocessError;
 use forksrv::ForkServer;
 use grammartec::context::Context;
 use grammartec::tree::TreeLike;
+#[allow(unused_imports)]
+use log::{debug, error, info, warn};
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fs;
@@ -84,6 +86,7 @@ impl Fuzzer {
             bitmap_size,
         );
         let container_id = std::env::var("HOSTNAME").unwrap_or("unknown".to_string());
+        info!("container_id: {}", container_id);
         Fuzzer {
             forksrv: fs,
             last_tried_inputs: HashSet::new(),
@@ -171,12 +174,17 @@ impl Fuzzer {
                     );
                     let mut file = fs::File::create(&file_path).expect("RAND_3096222153");
                     tree.unparse_to(ctx, &mut file);
-                    let sample =
-                        Sample::new(&self.container_id, &file_path, SampleType::Crash, 0.0);
-                    let rt = Runtime::new().unwrap();
-                    rt.block_on(async {
-                        let _res = message_post::send_sample(&self.addr, &sample).await;
-                    });
+                    match Sample::new(&self.container_id, &file_path, SampleType::Normal, 0.0, 0.0)
+                    {
+                        Ok(s) => {
+                            Runtime::new().unwrap().block_on(async {
+                                let _res = message_post::send_sample(&self.addr, &s).await;
+                            });
+                        }
+                        Err(e) => {
+                            warn!("Sample::new err: {}", e);
+                        }
+                    }
                 }
             }
             ExitReason::Normal(_) => {
@@ -217,11 +225,16 @@ impl Fuzzer {
                 );
                 let mut file = fs::File::create(&file_path).expect("RAND_452993103");
                 tree.unparse_to(ctx, &mut file);
-                let sample = Sample::new(&self.container_id, &file_path, SampleType::Timeout, 0.0);
-                let rt = Runtime::new().unwrap();
-                rt.block_on(async {
-                    let _res = message_post::send_sample(&self.addr, &sample).await;
-                });
+                match Sample::new(&self.container_id, &file_path, SampleType::Normal, 0.0, 0.0) {
+                    Ok(s) => {
+                        Runtime::new().unwrap().block_on(async {
+                            let _res = message_post::send_sample(&self.addr, &s).await;
+                        });
+                    }
+                    Err(e) => {
+                        warn!("Sample::new err: {}", e);
+                    }
+                }
             }
             ExitReason::Signaled(sig) => {
                 if new_bits.is_some() {
@@ -240,12 +253,17 @@ impl Fuzzer {
                     );
                     let mut file = fs::File::create(&file_path).expect("RAND_3690294970");
                     tree.unparse_to(ctx, &mut file);
-                    let sample =
-                        Sample::new(&self.container_id, &file_path, SampleType::Crash, 0.0);
-                    let rt = Runtime::new().unwrap();
-                    rt.block_on(async {
-                        let _res = message_post::send_sample(&self.addr, &sample).await;
-                    });
+                    match Sample::new(&self.container_id, &file_path, SampleType::Normal, 0.0, 0.0)
+                    {
+                        Ok(s) => {
+                            Runtime::new().unwrap().block_on(async {
+                                let _res = message_post::send_sample(&self.addr, &s).await;
+                            });
+                        }
+                        Err(e) => {
+                            warn!("Sample::new err: {}", e);
+                        }
+                    }
                 }
             }
             ExitReason::Stopped(_sig) => {}
@@ -275,16 +293,11 @@ impl Fuzzer {
 
     pub fn exec_raw(&mut self, code: &[u8]) -> Result<(ExitReason, u32), SubprocessError> {
         self.execution_count += 1;
-
         let start = Instant::now();
-
         let exitreason = self.forksrv.run(code)?;
-
         let execution_time = start.elapsed().subsec_nanos();
-
         self.average_executions_per_sec = self.average_executions_per_sec * 0.9
             + ((1.0 / (execution_time as f32)) * 1_000_000_000.0) * 0.1;
-
         Ok((exitreason, execution_time))
     }
 
@@ -336,28 +349,44 @@ impl Fuzzer {
                         .queue
                         .add(tree, old_bitmap, exitreason, ctx, execution_time);
 
-                    // get sample coverage
-                    let coverage = match self.calc_sample_coverage(&file_path) {
-                        Ok(cov) => cov,
-                        Err(_e) => 0.0,
-                    };
-                    if coverage != 0.0 {
-                        // send samples to server
-                        let sample = Sample::new(
-                            &self.container_id,
-                            &file_path,
-                            SampleType::Normal,
-                            coverage,
-                        );
-                        self.samples_vec.push(sample);
-                        // upload every 10 samples
-                        if self.samples_vec.len() >= 10 {
-                            let rt = Runtime::new().unwrap();
-                            rt.block_on(async {
-                                let _res =
-                                    message_post::send_samples(&self.addr, &self.samples_vec).await;
-                            });
-                            self.samples_vec.clear();
+                    if !is_file_empty(&file_path) {
+                        // get sample coverage
+                        let coverage = match self.calc_sample_coverage(&file_path) {
+                            Ok(cov) => cov,
+                            Err(_e) => (0.0, 0.0),
+                        };
+                        if coverage != (0.0, 0.0) {
+                            // send samples to server
+                            match Sample::new(
+                                &self.container_id,
+                                &file_path,
+                                SampleType::Normal,
+                                coverage.1,
+                                coverage.0,
+                            ) {
+                                Ok(s) => {
+                                    info!(
+                                        "sample {} func_cov: {}%; line_cov: {}%",
+                                        &file_path, coverage.0, coverage.1
+                                    );
+                                    self.samples_vec.push(s);
+                                    // upload every 10 samples
+                                    if self.samples_vec.len() >= 10 {
+                                        let rt = Runtime::new().unwrap();
+                                        rt.block_on(async {
+                                            let _res = message_post::send_samples(
+                                                &self.addr,
+                                                &self.samples_vec,
+                                            )
+                                            .await;
+                                        });
+                                        self.samples_vec.clear();
+                                    }
+                                }
+                                Err(e) => {
+                                    warn!("Sample::new err: {}", e);
+                                }
+                            }
                         }
                     }
                 }
@@ -388,7 +417,7 @@ impl Fuzzer {
     pub fn has_new_bits(&mut self, is_crash: bool) -> Option<Vec<usize>> {
         let mut res = vec![];
         let run_bitmap = self.forksrv.get_shared();
-        let mut gstate_lock = self.global_state.lock().expect("RAND_2040280272");
+        let mut gstate_lock = self.global_state.lock().expect("get global state err");
         let shared_bitmap = gstate_lock
             .bitmaps
             .get_mut(&is_crash)
@@ -411,7 +440,7 @@ impl Fuzzer {
         }
         None
     }
-    pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<f64, String> {
+    pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<(f64, f64), String> {
         let output = Command::new(&self.target_cov_path)
             .arg(&file_path)
             .output()
@@ -440,28 +469,50 @@ impl Fuzzer {
             .output()
             .map_err(|_| "Failed to execute the lcov command for summary".to_string())?;
 
-        let coverage_percentage =
+        let (lines_coverage, func_coverage) =
             extract_coverage_from_summary_output(&lcov_summary_output.stdout)?;
-        Ok(coverage_percentage)
+        Ok((lines_coverage, func_coverage))
     }
 }
-fn extract_coverage_from_summary_output(output: &[u8]) -> Result<f64, String> {
+
+fn extract_coverage_from_summary_output(output: &[u8]) -> Result<(f64, f64), String> {
     let output_str =
         std::str::from_utf8(output).map_err(|_| "Failed to parse lcov summary output")?;
-    let coverage_line = output_str
+    let func_coverage_line = output_str
         .lines()
         .find(|line| line.contains("functions..:")) // 找到以"functions..:"开头的行
         .ok_or("Coverage summary line not found")?;
 
-    let coverage_percentage_str = coverage_line
+    let func_coverage_percentage_str = func_coverage_line
         .split_whitespace()
         .nth(1)
         .ok_or("Failed to extract coverage percentage")?;
 
-    let coverage_percentage = coverage_percentage_str
+    let func_coverage_percentage = func_coverage_percentage_str
         .trim_end_matches('%')
         .parse::<f64>()
         .map_err(|_| "Failed to parse coverage percentage")?;
 
-    Ok(coverage_percentage)
+    let lines_coverage_line = output_str
+        .lines()
+        .find(|line| line.contains("lines......:")) // 找到以"functions..:"开头的行
+        .ok_or("Coverage summary line not found")?;
+
+    let lines_coverage_percentage_str = lines_coverage_line
+        .split_whitespace()
+        .nth(1)
+        .ok_or("Failed to extract coverage percentage")?;
+
+    let lines_coverage_percentage = lines_coverage_percentage_str
+        .trim_end_matches('%')
+        .parse::<f64>()
+        .map_err(|_| "Failed to parse coverage percentage")?;
+
+    Ok((func_coverage_percentage, lines_coverage_percentage))
+}
+
+fn is_file_empty(file_path: &str) -> bool {
+    fs::metadata(file_path)
+        .map(|m| m.len() == 0)
+        .unwrap_or(true)
 }
