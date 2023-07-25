@@ -1,8 +1,7 @@
 use crate::config::Config;
 use memmap::Mmap;
-use std::fs::OpenOptions;
+use std::fs::{remove_file, OpenOptions};
 use std::process::{Command, Stdio};
-
 pub struct CoverageInfo {
     pub lines_coverage: f32,
     pub func_coverage: f32,
@@ -14,7 +13,8 @@ impl CoverageInfo {
     pub fn new() -> Self {
         let lines_path = "/dev/shm/lines_cov".to_string();
         let func_path = "/dev/shm/func_cov".to_string();
-
+        remove_file(&func_path).unwrap();
+        remove_file(&lines_path).unwrap();
         let lines_file = OpenOptions::new()
             .read(true)
             .write(true)
@@ -22,7 +22,7 @@ impl CoverageInfo {
             .open(lines_path)
             .expect("Failed to open shared memory file");
         lines_file
-            .set_len(1024)
+            .set_len(128)
             .expect("Failed to set shared memory file size");
 
         let shm_lines =
@@ -35,7 +35,7 @@ impl CoverageInfo {
             .open(func_path)
             .expect("Failed to open shared memory file");
         function_file
-            .set_len(1024)
+            .set_len(128)
             .expect("Failed to set shared memory file size");
 
         let shm_func =

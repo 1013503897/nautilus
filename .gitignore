@@ -15,3 +15,6 @@ Cargo.lock
 
 /src/
 /work_dir/
+coverage.info
+hermit_log.txt
+Dockerfile/
