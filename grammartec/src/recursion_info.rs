@@ -4,7 +4,7 @@ use newtypes::{NTermID, NodeID};
 use rand::rngs::StdRng;
 use rand::thread_rng;
 use rand::SeedableRng;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use tree::Tree;
@@ -12,10 +12,33 @@ use tree::Tree;
 #[derive(Serialize, Clone, Deserialize)]
 pub struct RecursionInfo {
     recursive_parents: HashMap<NodeID, NodeID>,
-    #[serde(skip)]
+    #[serde(skip_serializing, deserialize_with = "deserialize_sampler")]
     sampler: Option<LoadedDiceSampler<StdRng>>,
     depth_by_offset: Vec<usize>,
     node_by_offset: Vec<NodeID>,
+    weights: Vec<f64>,
+}
+
+fn build_sampler_from_weights(weights: &Vec<f64>) -> LoadedDiceSampler<StdRng> {
+    LoadedDiceSampler::new(
+        weights.clone(),
+        StdRng::from_rng(thread_rng()).expect("StdRng::from_rng err!"),
+    )
+}
+
+fn deserialize_sampler<'de, D>(
+    deserializer: D,
+) -> Result<Option<LoadedDiceSampler<StdRng>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // Deserialize the weights field from the JSON data
+    let weights: Vec<f64> = Deserialize::deserialize(deserializer)?;
+
+    // Build the sampler using the weights
+    let sampler = build_sampler_from_weights(&weights);
+
+    Ok(Some(sampler))
 }
 
 impl fmt::Debug for RecursionInfo {
@@ -36,9 +59,10 @@ impl RecursionInfo {
         let sampler = RecursionInfo::build_sampler(&depth_by_offset);
         Some(Self {
             recursive_parents,
-            sampler: Some(sampler),
+            sampler: Some(sampler.0),
             depth_by_offset,
             node_by_offset,
+            weights: sampler.1,
         })
     }
 
@@ -78,17 +102,15 @@ impl RecursionInfo {
         res
     }
 
-    fn build_sampler(depths: &[usize]) -> LoadedDiceSampler<StdRng> {
+    fn build_sampler(depths: &[usize]) -> (LoadedDiceSampler<StdRng>, Vec<f64>) {
         let mut weights = depths.iter().map(|x| *x as f64).collect::<Vec<_>>();
         let norm: f64 = weights.iter().sum();
         assert!(norm > 0.0);
         for v in &mut weights {
             *v /= norm;
         }
-        LoadedDiceSampler::new(
-            weights,
-            StdRng::from_rng(thread_rng()).expect("RAND_1769941938"),
-        )
+
+        (build_sampler_from_weights(&weights), weights)
     }
 
     pub fn get_random_recursion_pair(&mut self) -> (NodeID, NodeID) {
