@@ -156,7 +156,8 @@ fn fuzzing_thread(
     loop {
         let inp = global_state.lock().expect("cann't get queue!").queue.pop();
         if let Some(mut inp) = inp {
-            //If subprocess died restart forkserver
+            // process input from queue
+            // If subprocess died restart forkserver
             if process_input(&mut state, &mut inp, config).is_err() {
                 let args = vec![];
                 let fuzzer = Fuzzer::new(
@@ -182,8 +183,10 @@ fn fuzzing_thread(
                 .queue
                 .finished(inp);
         } else {
+            // Generate mode cause queue is empty
+            // default generate 100 inputs
             for _ in 0..config.number_of_generate_inputs {
-                //If subprocess dies restart forkserver
+                // If subprocess dies restart forkserver
                 if state.generate_random().is_err() {
                     let args = vec![];
                     let fuzzer = Fuzzer::new(
@@ -579,7 +582,9 @@ fn main() {
     };
 
     for t in threads.collect::<Vec<_>>() {
-        t.expect("RAND_2698731594").join().expect("RAND_2698731594");
+        t.expect("fuzzing_thread error")
+            .join()
+            .expect("fuzzing_thread error");
     }
     status_thread.join().expect("status_thread error");
     warn!("exit??");

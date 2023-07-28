@@ -13,8 +13,16 @@ impl CoverageInfo {
     pub fn new() -> Self {
         let lines_path = "/dev/shm/lines_cov".to_string();
         let func_path = "/dev/shm/func_cov".to_string();
-        remove_file(&func_path).unwrap();
-        remove_file(&lines_path).unwrap();
+        remove_file(&func_path).unwrap_or_else(|err| {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                panic!("Failed to delete func-cov file: {}", err);
+            }
+        });
+        remove_file(&lines_path).unwrap_or_else(|err| {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                panic!("Failed to delete lines-cov file: {}", err);
+            }
+        });
         let lines_file = OpenOptions::new()
             .read(true)
             .write(true)
@@ -24,7 +32,6 @@ impl CoverageInfo {
         lines_file
             .set_len(128)
             .expect("Failed to set shared memory file size");
-
         let shm_lines =
             unsafe { Mmap::map(&lines_file).expect("Failed to create shared memory mapping") };
 
@@ -51,20 +58,22 @@ impl CoverageInfo {
     pub fn get_coverage(&mut self) {
         let lines_coverage = std::str::from_utf8(&self.shm_lines)
             .unwrap()
-            .to_owned()
-            .trim_end_matches('\0')
+            .split('%')
+            .next()
+            .unwrap()
+            .trim()
             .parse::<f32>()
             .unwrap_or(0.0);
-
         self.lines_coverage = self.lines_coverage.max(lines_coverage);
 
         let func_coverage = std::str::from_utf8(&self.shm_func)
             .unwrap()
-            .to_owned()
-            .trim_end_matches('\0')
+            .split('%')
+            .next()
+            .unwrap()
+            .trim()
             .parse::<f32>()
             .unwrap_or(0.0);
-
         self.func_coverage = self.func_coverage.max(func_coverage);
     }
 
@@ -72,10 +81,15 @@ impl CoverageInfo {
         let directory = config.path_to_workdir.clone();
         let executable = format!("{} 'AFL_FILE'", config.path_to_bin_target_with_cov.clone());
         let lua_src = config.path_to_src.clone();
+        use std::fs::File;
+        let out_file = File::create("cov_out.log").expect("Failed to create output file.");
+        let err_file = File::create("cov_err.log").expect("Failed to create output file.");
 
         Command::new("hermit-cov")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            // .stdout(Stdio::null())
+            // .stderr(Stdio::null())
+            .stdout(out_file)
+            .stderr(err_file)
             .arg("--live")
             .arg("-O")
             .arg("-d")

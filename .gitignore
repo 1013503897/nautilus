@@ -12,9 +12,12 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+*.log
 
 /src/
 /work_dir/
 coverage.info
 hermit_log.txt
 Dockerfile/
+cov_err.log
+cov_out.log

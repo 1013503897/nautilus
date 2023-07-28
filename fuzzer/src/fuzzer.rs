@@ -268,7 +268,7 @@ impl Fuzzer {
             }
             ExitReason::Stopped(_sig) => {}
         }
-        stdout().flush().expect("RAND_2937475131");
+        stdout().flush().expect("flush stdout err!");
         Ok(())
     }
 

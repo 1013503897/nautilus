@@ -87,11 +87,10 @@ def process_hermitcrab_test_cases(cargs):
     cov = {}
     cov['zero'] = {}
     cov['pos'] = {}
-    index = cargs.afl_fuzzing_dir.split("_")[-1]
     memory_lines = posix_ipc.SharedMemory(
-        "lines_cov_"+index, flags=posix_ipc.O_RDWR)
+        "lines_cov", flags=posix_ipc.O_RDWR)
     memory_functons = posix_ipc.SharedMemory(
-        "func_cov_"+index, flags=posix_ipc.O_RDWR)
+        "func_cov", flags=posix_ipc.O_RDWR)
     lines_map = mmap.mmap(memory_lines.fd, memory_lines.size)
     function_map = mmap.mmap(memory_functons.fd, memory_functons.size)
 
@@ -670,11 +669,9 @@ def is_hermitcrab_fuzz_running(cargs):
                     '/proc', pid, 'cmdline'), 'rb')
                 cmdline = cmdline_file.read().decode().split('\x00')
                 cmdline_file.close()
-                if any(cargs.afl_fuzzing_dir in arg for arg in cmdline):
-                    with open(os.path.join('/proc', pid, 'comm'), 'r') as comm_file:
-                        if comm_file.read().strip() == "fuzzer":
-                            print("get fuzzer pid: %s" % pid)
-                            return int(pid)
+                if any("fuzzer" in arg for arg in cmdline):
+                    print("get fuzzer pid: %s" % pid)
+                    return int(pid)
             except IOError:
                 pass
     return None
