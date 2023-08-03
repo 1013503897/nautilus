@@ -9,6 +9,20 @@ pub struct CoverageInfo {
     shm_func: Mmap,
 }
 
+pub struct SampleCoverage {
+    pub lines_coverage: f32,
+    pub func_coverage: f32,
+}
+
+impl SampleCoverage {
+    pub fn new(lines_coverage: f32, func_coverage: f32) -> Self {
+        Self {
+            lines_coverage,
+            func_coverage,
+        }
+    }
+}
+
 impl CoverageInfo {
     pub fn new() -> Self {
         let lines_path = "/dev/shm/lines_cov".to_string();

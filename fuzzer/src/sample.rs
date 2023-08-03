@@ -17,7 +17,7 @@ pub enum SampleType {
 pub struct Sample {
     #[serde(rename = "containerId")]
     container_id: String,
-    content: String,
+    content: Vec<u8>, // Changed from String to Vec<u8>
     #[serde(rename = "sampleType")]
     sample_type: SampleType,
     hash: String,
@@ -30,40 +30,26 @@ pub struct Sample {
 impl Sample {
     pub fn new(
         container_id: &str,
-        file_path: &str,
+        code: &[u8],
         sample_type: SampleType,
         func_coverage: f32,
         lines_coverage: f32,
-    ) -> Result<Sample, Box<dyn std::error::Error>> {
-        // Check if the file exists
-        if !Path::new(&file_path).exists() {
-            return Err(format!("File not found: {}", file_path).into());
-        }
-
-        // Compute size
-        let metadata = fs::metadata(&file_path)?;
-        let size = metadata.len() as usize;
+    ) -> Self {
+        let size = code.len();
 
         // Compute hash
-        let mut file = fs::File::open(&file_path)?;
-        let mut buffer = Vec::new();
-        if file.read_to_end(&mut buffer).is_err() {
-            panic!("Failed to read file");
-        }
         let mut hasher = Sha256::new();
-        hasher.update(&buffer);
+        hasher.update(&code);
         let hash = format!("{:x}", hasher.finalize());
-
-        let content = String::from_utf8(buffer)?;
-        Ok(Sample {
+        Sample {
             container_id: String::from(container_id),
-            content,
+            content: code.to_vec(), // Changed from String to Vec<u8>
             sample_type,
             hash,
             size,
             func_coverage,
             lines_coverage,
             log: String::from("default_log"),
-        })
+        }
     }
 }

@@ -1,3 +1,4 @@
+use crate::coverage::SampleCoverage;
 use crate::message_post;
 use crate::sample::{Sample, SampleType};
 use crate::shared_state::GlobalSharedState;
@@ -174,17 +175,11 @@ impl Fuzzer {
                     );
                     let mut file = fs::File::create(&file_path).expect("RAND_3096222153");
                     tree.unparse_to(ctx, &mut file);
-                    match Sample::new(&self.container_id, &file_path, SampleType::Normal, 0.0, 0.0)
-                    {
-                        Ok(s) => {
-                            Runtime::new().unwrap().block_on(async {
-                                let _res = message_post::send_sample(&self.addr, &s).await;
-                            });
-                        }
-                        Err(e) => {
-                            warn!("Sample::new err: {}", e);
-                        }
-                    }
+                    let sample =
+                        Sample::new(&self.container_id, &code, SampleType::Normal, 0.0, 0.0);
+                    Runtime::new().unwrap().block_on(async {
+                        let _res = message_post::send_sample(&self.addr, &sample).await;
+                    });
                 }
             }
             ExitReason::Normal(_) => {
@@ -225,16 +220,10 @@ impl Fuzzer {
                 );
                 let mut file = fs::File::create(&file_path).expect("RAND_452993103");
                 tree.unparse_to(ctx, &mut file);
-                match Sample::new(&self.container_id, &file_path, SampleType::Normal, 0.0, 0.0) {
-                    Ok(s) => {
-                        Runtime::new().unwrap().block_on(async {
-                            let _res = message_post::send_sample(&self.addr, &s).await;
-                        });
-                    }
-                    Err(e) => {
-                        warn!("Sample::new err: {}", e);
-                    }
-                }
+                let sample = Sample::new(&self.container_id, &code, SampleType::Normal, 0.0, 0.0);
+                Runtime::new().unwrap().block_on(async {
+                    let _res = message_post::send_sample(&self.addr, &sample).await;
+                });
             }
             ExitReason::Signaled(sig) => {
                 if new_bits.is_some() {
@@ -253,17 +242,11 @@ impl Fuzzer {
                     );
                     let mut file = fs::File::create(&file_path).expect("RAND_3690294970");
                     tree.unparse_to(ctx, &mut file);
-                    match Sample::new(&self.container_id, &file_path, SampleType::Normal, 0.0, 0.0)
-                    {
-                        Ok(s) => {
-                            Runtime::new().unwrap().block_on(async {
-                                let _res = message_post::send_sample(&self.addr, &s).await;
-                            });
-                        }
-                        Err(e) => {
-                            warn!("Sample::new err: {}", e);
-                        }
-                    }
+                    let sample =
+                        Sample::new(&self.container_id, &code, SampleType::Normal, 0.0, 0.0);
+                    Runtime::new().unwrap().block_on(async {
+                        let _res = message_post::send_sample(&self.addr, &sample).await;
+                    });
                 }
             }
             ExitReason::Stopped(_sig) => {}
@@ -351,41 +334,32 @@ impl Fuzzer {
                     final_bits = Some(new_bits);
                     if !is_file_empty(&file_path) {
                         // get sample coverage
-                        let coverage = match self.calc_sample_coverage(&file_path) {
-                            Ok(cov) => cov,
-                            Err(_e) => (0.0, 0.0),
-                        };
-                        if coverage != (0.0, 0.0) {
+                        let cov = self.calc_sample_coverage(&file_path);
+                        if cov.is_ok() {
+                            let sample_cov = cov.unwrap();
                             // send samples to server
-                            match Sample::new(
+                            let sample = Sample::new(
                                 &self.container_id,
-                                &file_path,
+                                &code,
                                 SampleType::Normal,
-                                coverage.1,
-                                coverage.0,
-                            ) {
-                                Ok(s) => {
-                                    info!(
-                                        "sample {} func_cov: {}%; line_cov: {}%",
-                                        &file_path, coverage.0, coverage.1
-                                    );
-                                    self.samples_vec.push(s);
-                                    // upload every 10 samples
-                                    if self.samples_vec.len() >= 10 {
-                                        let rt = Runtime::new().unwrap();
-                                        rt.block_on(async {
-                                            let _res = message_post::send_samples(
-                                                &self.addr,
-                                                &self.samples_vec,
-                                            )
+                                sample_cov.func_coverage,
+                                sample_cov.lines_coverage,
+                            );
+
+                            info!(
+                                "sample {} func_cov: {}%; line_cov: {}%",
+                                &file_path, sample_cov.func_coverage, sample_cov.lines_coverage
+                            );
+                            self.samples_vec.push(sample);
+                            // upload every 10 samples
+                            if self.samples_vec.len() >= 10 {
+                                let rt = Runtime::new().unwrap();
+                                rt.block_on(async {
+                                    let _res =
+                                        message_post::send_samples(&self.addr, &self.samples_vec)
                                             .await;
-                                        });
-                                        self.samples_vec.clear();
-                                    }
-                                }
-                                Err(e) => {
-                                    warn!("Sample::new err: {}", e);
-                                }
+                                });
+                                self.samples_vec.clear();
                             }
                         }
                     }
@@ -441,7 +415,7 @@ impl Fuzzer {
         None
     }
 
-    pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<(f32, f32), String> {
+    pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<SampleCoverage, String> {
         let output = Command::new(&self.target_cov_path)
             .arg(&file_path)
             .output()
@@ -472,7 +446,7 @@ impl Fuzzer {
 
         let (lines_coverage, func_coverage) =
             extract_coverage_from_summary_output(&lcov_summary_output.stdout)?;
-        Ok((lines_coverage, func_coverage))
+        Ok(SampleCoverage::new(lines_coverage, func_coverage))
     }
 }
 
