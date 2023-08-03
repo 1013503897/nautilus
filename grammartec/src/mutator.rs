@@ -45,7 +45,7 @@ impl Mutator {
     pub fn minimize_tree<F, E>(
         &mut self,
         tree: &mut Tree,
-        bits: &HashSet<usize>,
+        fresh_bits: &HashSet<usize>,
         ctx: &Context,
         start_index: usize,
         end_index: usize,
@@ -67,7 +67,7 @@ impl Mutator {
                     &self.scratchpad,
                     NodeID::from(0),
                     ctx,
-                    bits,
+                    fresh_bits,
                     tester,
                 )? {
                     mem::drop(mem::replace(tree, t));
@@ -85,7 +85,7 @@ impl Mutator {
     pub fn minimize_rec<F, E>(
         &mut self,
         tree: &mut Tree,
-        bits: &HashSet<usize>,
+        fresh_bits: &HashSet<usize>,
         ctx: &Context,
         start_index: usize,
         end_index: usize,
@@ -99,7 +99,7 @@ impl Mutator {
             let n = NodeID::from(i);
             if let Some(parent) = Mutator::find_parent_with_nt(tree, n, ctx) {
                 if let Some(t) =
-                    Mutator::test_and_convert(tree, parent, tree, n, ctx, bits, tester)?
+                    Mutator::test_and_convert(tree, parent, tree, n, ctx, fresh_bits, tester)?
                 {
                     mem::drop(mem::replace(tree, t));
                     i = parent.into();

@@ -81,15 +81,10 @@ impl CoverageInfo {
         let directory = config.path_to_workdir.clone();
         let executable = format!("{} 'AFL_FILE'", config.path_to_bin_target_with_cov.clone());
         let lua_src = config.path_to_src.clone();
-        use std::fs::File;
-        let out_file = File::create("cov_out.log").expect("Failed to create output file.");
-        let err_file = File::create("cov_err.log").expect("Failed to create output file.");
 
         Command::new("hermit-cov")
-            // .stdout(Stdio::null())
-            // .stderr(Stdio::null())
-            .stdout(out_file)
-            .stderr(err_file)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .arg("--live")
             .arg("-O")
             .arg("-d")

@@ -177,11 +177,11 @@ fn fuzzing_thread(
                 old_execution_count = 0;
                 old_executions_per_sec = 0;
             }
-            global_state
-                .lock()
-                .expect("RAND_788470278")
-                .queue
-                .finished(inp);
+            /*global_state
+            .lock()
+            .expect("RAND_788470278")
+            .queue
+            .finished(inp);*/
         } else {
             // Generate mode cause queue is empty
             // default generate 100 inputs
@@ -207,11 +207,11 @@ fn fuzzing_thread(
                     old_executions_per_sec = 0;
                 }
             }
-            global_state
-                .lock()
-                .expect("RAND_2035137253")
-                .queue
-                .new_round();
+            //global_state
+            //    .lock()
+            //    .expect("RAND_2035137253")
+            //    .queue
+            //    .new_round();
         }
         let mut stats = global_state.lock().expect("RAND_2403514078");
         stats.execution_count += state.fuzzer.execution_count - old_execution_count;
@@ -331,7 +331,6 @@ fn main() {
     )));
     let shared_chunkstore = Arc::new(ChunkStoreWrapper::new(config.path_to_workdir.clone()));
 
-    let mut my_context;
     let grammar_path = matches
         .get_one::<String>("grammar")
         .unwrap_or(&config.path_to_grammar)
@@ -343,7 +342,7 @@ fn main() {
     }
 
     //Generate rules using a grammar
-    my_context = Context::new();
+    let mut my_context = Context::new();
     if grammar_path.ends_with(".json") {
         let gf = File::open(grammar_path).expect("cannot read grammar file");
         let rules: Vec<Vec<String>> =

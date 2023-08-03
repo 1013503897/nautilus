@@ -325,7 +325,7 @@ impl Fuzzer {
         tree_like: &T,
         ctx: &Context,
     ) -> Result<(Option<Vec<usize>>, ExitReason), SubprocessError> {
-        let (exitreason, execution_time) = self.exec_raw(code)?;
+        let (exitreason, _) = self.exec_raw(code)?;
 
         let is_crash = matches!(
             exitreason,
@@ -340,15 +340,15 @@ impl Fuzzer {
                 let old_bitmap: Vec<u8> = self.forksrv.get_shared().to_vec();
                 self.check_deterministic_behaviour(&old_bitmap, &mut new_bits, code)?;
                 if !new_bits.is_empty() {
-                    final_bits = Some(new_bits);
                     let tree = tree_like.to_tree(ctx);
                     let file_path = self
                         .global_state
                         .lock()
                         .expect("RAND_2835014626")
                         .queue
-                        .add(tree, old_bitmap, exitreason, ctx, execution_time);
+                        .add(tree, exitreason, ctx, &new_bits);
 
+                    final_bits = Some(new_bits);
                     if !is_file_empty(&file_path) {
                         // get sample coverage
                         let coverage = match self.calc_sample_coverage(&file_path) {
@@ -425,12 +425,12 @@ impl Fuzzer {
 
         let mut density = 0;
         for (i, elem) in shared_bitmap.iter_mut().enumerate() {
+            if (run_bitmap[i] != 0) && (*elem == 0) {
+                *elem |= run_bitmap[i]; // update shared_bitmap in fuzzer
+                res.push(i); // add new bit as index to res
+            }
             if *elem != 0 {
                 density += 1;
-            }
-            if (run_bitmap[i] != 0) && (*elem == 0) {
-                *elem |= run_bitmap[i];
-                res.push(i);
             }
         }
 
@@ -440,6 +440,7 @@ impl Fuzzer {
         }
         None
     }
+
     pub fn calc_sample_coverage(&mut self, file_path: &str) -> Result<(f32, f32), String> {
         let output = Command::new(&self.target_cov_path)
             .arg(&file_path)

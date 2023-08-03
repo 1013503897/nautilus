@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 pub struct GlobalSharedState {
     pub queue: Queue,
-    //false for not crashing input. True for crashing inputs
+    // false for not crashing input. True for crashing inputs
     pub bitmaps: HashMap<bool, Vec<u8>>,
     pub execution_count: u64,
     pub average_executions_per_sec: f32,
