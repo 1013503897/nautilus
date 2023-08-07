@@ -17,9 +17,9 @@ use std::io::stdout;
 use std::io::Write;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Instant;
 use tokio::runtime::Runtime;
+use tokio::task;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionReason {
@@ -167,16 +167,21 @@ impl Fuzzer {
                         .lock()
                         .expect("RAND_202860771")
                         .last_found_asan = Local::now().format("[%Y-%m-%d] %H:%M:%S").to_string();
-                    let file_path = format!(
-                        "{}/outputs/signaled/ASAN_{:09}_{}",
-                        self.work_dir,
-                        self.execution_count,
-                        thread::current().name().expect("RAND_4086695190")
+
+                    let item = self
+                        .global_state
+                        .lock()
+                        .expect("RAND_2835014626")
+                        .queue
+                        .gen_item(tree.to_tree(ctx), &new_bits.unwrap());
+                    let sample = Sample::new(
+                        &self.container_id,
+                        &code,
+                        SampleType::Crash,
+                        0.0,
+                        0.0,
+                        Some(item),
                     );
-                    let mut file = fs::File::create(&file_path).expect("RAND_3096222153");
-                    tree.unparse_to(ctx, &mut file);
-                    let sample =
-                        Sample::new(&self.container_id, &code, SampleType::Normal, 0.0, 0.0);
                     Runtime::new().unwrap().block_on(async {
                         let _res = message_post::send_sample(&self.addr, &sample).await;
                     });
@@ -214,18 +219,20 @@ impl Fuzzer {
                     .lock()
                     .expect("RAND_1706238230")
                     .last_timeout = Local::now().format("[%Y-%m-%d] %H:%M:%S").to_string();
-                let file_path = format!(
-                    "{}/outputs/timeout/{:09}",
-                    self.work_dir, self.execution_count
+
+                let sample = Sample::new(
+                    &self.container_id,
+                    &code,
+                    SampleType::Timeout,
+                    0.0,
+                    0.0,
+                    None,
                 );
-                let mut file = fs::File::create(&file_path).expect("RAND_452993103");
-                tree.unparse_to(ctx, &mut file);
-                let sample = Sample::new(&self.container_id, &code, SampleType::Normal, 0.0, 0.0);
                 Runtime::new().unwrap().block_on(async {
                     let _res = message_post::send_sample(&self.addr, &sample).await;
                 });
             }
-            ExitReason::Signaled(sig) => {
+            ExitReason::Signaled(_sig) => {
                 if new_bits.is_some() {
                     self.global_state
                         .lock()
@@ -235,15 +242,20 @@ impl Fuzzer {
                         .lock()
                         .expect("RAND_4287051369")
                         .last_found_sig = Local::now().format("[%Y-%m-%d] %H:%M:%S").to_string();
-
-                    let file_path = format!(
-                        "{}/outputs/signaled/{sig:?}_{:09}",
-                        self.work_dir, self.execution_count
+                    let item = self
+                        .global_state
+                        .lock()
+                        .expect("RAND_2835014626")
+                        .queue
+                        .gen_item(tree.to_tree(ctx), &new_bits.unwrap());
+                    let sample = Sample::new(
+                        &self.container_id,
+                        &code,
+                        SampleType::Crash,
+                        0.0,
+                        0.0,
+                        Some(item),
                     );
-                    let mut file = fs::File::create(&file_path).expect("RAND_3690294970");
-                    tree.unparse_to(ctx, &mut file);
-                    let sample =
-                        Sample::new(&self.container_id, &code, SampleType::Normal, 0.0, 0.0);
                     Runtime::new().unwrap().block_on(async {
                         let _res = message_post::send_sample(&self.addr, &sample).await;
                     });
@@ -329,8 +341,18 @@ impl Fuzzer {
                         .lock()
                         .expect("RAND_2835014626")
                         .queue
-                        .add(tree, exitreason, ctx, &new_bits);
-
+                        .unparse_to_file(code);
+                    let item = self
+                        .global_state
+                        .lock()
+                        .expect("RAND_2835014626")
+                        .queue
+                        .gen_item(tree, &new_bits);
+                    self.global_state
+                        .lock()
+                        .expect("RAND_2835014626")
+                        .queue
+                        .add_item(item.clone());
                     final_bits = Some(new_bits);
                     if !is_file_empty(&file_path) {
                         // get sample coverage
@@ -344,21 +366,35 @@ impl Fuzzer {
                                 SampleType::Normal,
                                 sample_cov.func_coverage,
                                 sample_cov.lines_coverage,
+                                Some(item),
                             );
 
                             info!(
                                 "sample {} func_cov: {}%; line_cov: {}%",
                                 &file_path, sample_cov.func_coverage, sample_cov.lines_coverage
                             );
-                            self.samples_vec.push(sample);
+                            self.samples_vec.push(sample.clone());
+
+                            let samples_vec = self.samples_vec.clone();
                             // upload every 10 samples
                             if self.samples_vec.len() >= 10 {
-                                let rt = Runtime::new().unwrap();
-                                rt.block_on(async {
+                                Runtime::new().unwrap().block_on(async {
                                     let _res =
-                                        message_post::send_samples(&self.addr, &self.samples_vec)
-                                            .await;
+                                        message_post::send_samples(&self.addr, samples_vec).await;
                                 });
+                                //let runtime = tokio::runtime::Builder::new_current_thread()
+                                //    .enable_all()
+                                //    .build()
+                                //    .unwrap();
+                                //runtime.block_on(async {
+                                //    task::spawn({
+                                //        let addr = self.addr.clone();
+                                //        let samples_vec = self.samples_vec.clone();
+                                //        async move {
+                                //            message_post::send_samples(&addr, samples_vec).await;
+                                //        }
+                                //    });
+                                //});
                                 self.samples_vec.clear();
                             }
                         }

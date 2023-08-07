@@ -1,9 +1,7 @@
+use crate::queue::QueueItem;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sha2::{Digest, Sha256};
-use std::fs;
-use std::io::Read;
-use std::path::Path;
 
 #[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
 #[repr(u32)]
@@ -13,16 +11,20 @@ pub enum SampleType {
     Timeout,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Sample {
+    #[serde(rename = "ast")]
+    queue_item: Option<QueueItem>,
     #[serde(rename = "containerId")]
     container_id: String,
-    content: Vec<u8>, // Changed from String to Vec<u8>
+    content: String, // Changed from String to Vec<u8>
     #[serde(rename = "sampleType")]
     sample_type: SampleType,
     hash: String,
     size: usize,
+    #[serde(rename = "functionCoverage")]
     func_coverage: f32,
+    #[serde(rename = "lineCoverage")]
     lines_coverage: f32,
     log: String,
 }
@@ -34,6 +36,7 @@ impl Sample {
         sample_type: SampleType,
         func_coverage: f32,
         lines_coverage: f32,
+        queue_item: Option<QueueItem>,
     ) -> Self {
         let size = code.len();
 
@@ -43,13 +46,14 @@ impl Sample {
         let hash = format!("{:x}", hasher.finalize());
         Sample {
             container_id: String::from(container_id),
-            content: code.to_vec(), // Changed from String to Vec<u8>
+            content: String::from_utf8(code.to_vec()).unwrap(),
             sample_type,
             hash,
             size,
             func_coverage,
             lines_coverage,
             log: String::from("default_log"),
+            queue_item,
         }
     }
 }

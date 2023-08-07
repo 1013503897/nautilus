@@ -74,8 +74,9 @@ impl RuleChild {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, Debug, PartialEq, Serialize, Deserialize)]
 pub enum RuleIDOrCustom {
+    #[serde(rename = "r")] // Save space in the json file
     Rule(RuleID),
     Custom(RuleID, Vec<u8>),
 }

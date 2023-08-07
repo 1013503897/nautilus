@@ -100,7 +100,7 @@ impl ForkServer {
                 unistd::close(inp_file.as_raw_fd()).expect("couldn't close input file");
                 unistd::close(ctl_in).expect("couldn't close ctl_in");
                 unistd::close(ctl_out).expect("couldn't close ctl_out");
-                unistd::close(st_in).expect("couldn't close st_out");
+                unistd::close(st_in).expect("couldn't close st_in");
                 unistd::close(st_out).expect("couldn't close st_out");
 
                 let path = CString::new(path).expect("binary path must not contain zero");

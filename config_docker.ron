@@ -11,7 +11,7 @@ Config(
 
 
 	number_of_threads:			1,
-	timeout_in_millis:			2000,
+	timeout_in_millis:			50000,
 	server_addr:				"10.160.151.234:8071",
 	redis_addr:					"redis://127.0.0.1/",
 

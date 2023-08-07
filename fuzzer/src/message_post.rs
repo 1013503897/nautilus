@@ -3,24 +3,23 @@ use crate::status::Status;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 
-pub async fn send_samples(
-    addr: &str,
-    samples: &Vec<Sample>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn send_samples(addr: &str, samples: Vec<Sample>) {
     let url = format!("http://{}/api/hermitcrab/sample/addSample", addr);
     let client = reqwest::Client::new();
-    let res = client
+
+    match client
         .post(url)
         .header("Content-Type", "application/json")
         .json(&samples)
         .send()
-        .await?;
-    if res.status().is_success() {
-        info!("Successfully sent samples");
-        Ok(())
-    } else {
-        warn!("Failed to send samples");
-        Err("Failed to send samples".into())
+        .await
+    {
+        Ok(res) if res.status().is_success() => {
+            info!("Successfully sent samples");
+        }
+        _ => {
+            warn!("Failed to send samples");
+        }
     }
 }
 

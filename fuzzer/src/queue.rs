@@ -1,12 +1,12 @@
-use forksrv::exitreason::ExitReason;
-use grammartec::context::Context;
 use grammartec::recursion_info::RecursionInfo;
 use grammartec::tree::Tree;
-use grammartec::tree::TreeLike;
+#[allow(unused_imports)]
+use log::{debug, error, info, warn};
 use redis::Commands;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
+use std::io::Write;
 
 #[derive(Serialize, Clone, Deserialize)]
 pub enum InputState {
@@ -44,27 +44,9 @@ pub struct Queue {
 }
 
 impl Queue {
-    pub fn add(
-        &mut self,
-        tree: Tree,
-        exitreason: ExitReason,
-        ctx: &Context,
-        new_bits: &Vec<usize>,
-    ) -> String {
+    pub fn gen_item(&mut self, tree: Tree, new_bits: &Vec<usize>) -> QueueItem {
         let fresh_bits: HashSet<usize> = HashSet::from_iter(new_bits.iter().cloned());
-        // Check which bits are new and insert them into fresh_bits
-
-        let file_name = format!(
-            "{}/outputs/queue/id:{:09},er:{exitreason:?}",
-            self.work_dir, self.current_id
-        );
-        //Create File for entry
-        let mut file = File::create(&file_name).expect("file create error");
-        tree.unparse_to(ctx, &mut file);
-
-        let inp = QueueItem::new(self.current_id, tree, fresh_bits);
-        self.add_item(inp);
-        file_name
+        QueueItem::new(self.current_id, tree, fresh_bits)
     }
 
     pub fn add_item(&mut self, item: QueueItem) {
@@ -77,6 +59,15 @@ impl Queue {
         } else {
             self.current_id += 1;
         };
+    }
+
+    pub fn unparse_to_file(&mut self, code: &[u8]) -> String {
+        let file_name = format!("{}/outputs/queue/id:{:09}", self.work_dir, self.current_id);
+        let mut file = File::create(&file_name).unwrap();
+        if file.write_all(code).is_err() {
+            warn!("Failed to write to file {}", file_name);
+        }
+        file_name
     }
 
     pub fn new(work_dir: String, redis_addr: String) -> Self {
